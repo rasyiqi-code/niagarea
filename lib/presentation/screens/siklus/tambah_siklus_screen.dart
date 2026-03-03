@@ -213,6 +213,7 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
             ),
           ],
         ),
+      ),
     );
   }
 
@@ -222,9 +223,7 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer.withAlpha(50),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.primaryContainer,
-        ),
+        border: Border.all(color: theme.colorScheme.primaryContainer),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,10 +255,7 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
             'Bank BCA\n'
             '1234567890\n'
             'a/n PT NiagaRea Digital',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              height: 1.5,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, height: 1.5),
           ),
           const SizedBox(height: 12),
           Text(

@@ -36,7 +36,8 @@ final digiflazzClientProvider = Provider<DigiflazzClient>((ref) {
 final syncServiceProvider = Provider<SyncService>((ref) {
   final client = ref.watch(digiflazzClientProvider);
   final db = ref.watch(databaseProvider);
-  return SyncService(client: client, produkDao: db.produkDao);
+  final config = ref.watch(digiflazzConfigProvider);
+  return SyncService(client: client, produkDao: db.produkDao, config: config);
 });
 
 /// Provider singleton untuk service antrian transaksi.

@@ -7,6 +7,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -58,6 +59,16 @@ class PengaturanScreen extends ConsumerWidget {
               title: const Text('Sinkronisasi Produk'),
               subtitle: const Text('Ambil daftar produk terbaru'),
               onTap: () => _sinkronisasiProduk(context, ref),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_business_outlined),
+              title: const Text('Markup Perusahaan'),
+              subtitle: FutureBuilder<int>(
+                future: ref.read(digiflazzConfigProvider).getMarkupGlobal(),
+                builder: (context, snapshot) =>
+                    Text('Rp ${snapshot.data ?? 0} per produk'),
+              ),
+              onTap: () => _showMarkupDialog(context, ref),
             ),
             const Divider(),
           ],
@@ -368,6 +379,62 @@ class PengaturanScreen extends ConsumerWidget {
         ),
       );
     }
+  }
+
+  /// Dialog input markup global.
+  void _showMarkupDialog(BuildContext context, WidgetRef ref) async {
+    final config = ref.read(digiflazzConfigProvider);
+    final currentMarkup = await config.getMarkupGlobal();
+    final controller = TextEditingController(text: currentMarkup.toString());
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Markup Perusahaan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Markup ini akan ditambahkan ke harga beli provider (Digiflazz) '
+              'saat sinkronisasi produk dilakukan.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Markup (Rp)',
+                prefixText: 'Rp ',
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final val = int.tryParse(controller.text) ?? 0;
+              await config.setMarkupGlobal(val);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Markup global diperbarui!')),
+                );
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

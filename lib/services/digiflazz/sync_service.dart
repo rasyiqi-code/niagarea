@@ -9,6 +9,7 @@ import 'package:drift/drift.dart';
 import '../../data/daos/produk_dao.dart';
 import '../../data/database/app_database.dart';
 import 'digiflazz_client.dart';
+import 'digiflazz_config.dart';
 import 'digiflazz_models.dart';
 
 /// Hasil sinkronisasi produk.
@@ -43,10 +44,15 @@ class SyncResult {
 class SyncService {
   final DigiflazzClient _client;
   final ProdukDao _produkDao;
+  final DigiflazzConfig _config;
 
-  SyncService({required DigiflazzClient client, required ProdukDao produkDao})
-    : _client = client,
-      _produkDao = produkDao;
+  SyncService({
+    required DigiflazzClient client,
+    required ProdukDao produkDao,
+    required DigiflazzConfig config,
+  }) : _client = client,
+       _produkDao = produkDao,
+       _config = config;
 
   /// Sinkronisasi daftar produk dari Digiflazz ke database lokal.
   ///
@@ -59,7 +65,10 @@ class SyncService {
     String cmd = 'prepaid',
     bool simpanSemuaStatus = false,
   }) async {
-    // 1. Ambil daftar harga dari API
+    // 0. Ambil markup global
+    final markupGlobal = await _config.getMarkupGlobal();
+
+    // 1. Ambil daftar harga dari API (prepaid/pasca)
     final response = await _client.ambilDaftarHarga(cmd: cmd);
     final semuaProduk = response.data;
 
@@ -80,7 +89,9 @@ class SyncService {
     final totalDiSkip = semuaProduk.length - produkFiltered.length;
 
     // 3. Map ke format database (ProdukTableCompanion)
-    final companions = produkFiltered.map(_mapToProdukCompanion).toList();
+    final companions = produkFiltered
+        .map((p) => _mapToProdukCompanion(p, markupGlobal))
+        .toList();
 
     // 4. Bulk upsert ke database lokal
     await _produkDao.upsertProdukBatch(companions);
@@ -98,19 +109,18 @@ class SyncService {
   /// Map [ProdukDigiflazz] ke [ProdukTableCompanion] untuk database.
   ///
   /// Mapping field:
-  /// - buyer_sku_code → kode_digiflazz
-  /// - product_name → nama
-  /// - category → kategori
-  /// - brand → brand
-  /// - price → harga_beli
+  /// - price + markup → harga_beli (modal user)
   /// - buyer_product_status → aktif (default false, user pilih manual)
-  ProdukTableCompanion _mapToProdukCompanion(ProdukDigiflazz produk) {
+  ProdukTableCompanion _mapToProdukCompanion(
+    ProdukDigiflazz produk,
+    int markup,
+  ) {
     return ProdukTableCompanion(
       kodeDigiflazz: Value(produk.buyerSkuCode),
       nama: Value(produk.productName),
       kategori: Value(_normalizeKategori(produk.category)),
       brand: Value(produk.brand),
-      hargaBeli: Value(produk.price),
+      hargaBeli: Value(produk.price + markup),
       deskripsi: Value(produk.desc),
       lastUpdated: Value(DateTime.now()),
       // Catatan: 'aktif' dan 'hargaJual' TIDAK di-update saat sync

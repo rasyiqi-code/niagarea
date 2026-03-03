@@ -3,6 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:niagarea/data/daos/produk_dao.dart';
 import 'package:niagarea/data/database/app_database.dart';
 import 'package:niagarea/services/digiflazz/digiflazz_client.dart';
+import 'package:niagarea/services/digiflazz/digiflazz_config.dart';
 import 'package:niagarea/services/digiflazz/digiflazz_models.dart';
 import 'package:niagarea/services/digiflazz/sync_service.dart';
 
@@ -10,15 +11,25 @@ class MockDigiflazzClient extends Mock implements DigiflazzClient {}
 
 class MockProdukDao extends Mock implements ProdukDao {}
 
+class MockDigiflazzConfig extends Mock implements DigiflazzConfig {}
+
 void main() {
   late SyncService syncService;
   late MockDigiflazzClient mockClient;
   late MockProdukDao mockDao;
+  late MockDigiflazzConfig mockConfig;
 
   setUp(() {
     mockClient = MockDigiflazzClient();
     mockDao = MockProdukDao();
-    syncService = SyncService(client: mockClient, produkDao: mockDao);
+    mockConfig = MockDigiflazzConfig();
+    syncService = SyncService(
+      client: mockClient,
+      produkDao: mockDao,
+      config: mockConfig,
+    );
+
+    when(() => mockConfig.getMarkupGlobal()).thenAnswer((_) async => 0);
 
     registerFallbackValue(<ProdukTableCompanion>[]);
   });
@@ -104,6 +115,36 @@ void main() {
       expect(result.totalDariApi, 0);
       expect(result.totalDisimpan, 0);
       verifyNever(() => mockDao.upsertProdukBatch(any()));
+    });
+
+    test('menerapkan markup global pada hargaBeli', () async {
+      final mockData = [
+        const ProdukDigiflazz(
+          productName: 'P1',
+          category: 'C1',
+          brand: 'B1',
+          buyerSkuCode: 'k1',
+          price: 10000,
+          buyerProductStatus: true,
+        ),
+      ];
+
+      // Set markup ke 500
+      when(() => mockConfig.getMarkupGlobal()).thenAnswer((_) async => 500);
+      when(
+        () => mockClient.ambilDaftarHarga(cmd: any(named: 'cmd')),
+      ).thenAnswer((_) async => DaftarHargaResponse(data: mockData));
+      when(() => mockDao.upsertProdukBatch(any())).thenAnswer((_) async => {});
+
+      await syncService.sinkronisasiProduk();
+
+      final captured = verify(
+        () => mockDao.upsertProdukBatch(captureAny()),
+      ).captured;
+      final companions = captured.last as List<ProdukTableCompanion>;
+
+      // Modal harusnya 10000 + 500 = 10500
+      expect(companions.first.hargaBeli.value, 10500);
     });
   });
 

@@ -28,6 +28,9 @@ class DigiflazzConfig {
   /// Key penyimpanan untuk mode pengujian (testing)
   static const String _testModeKey = 'digiflazz_test_mode';
 
+  /// Key penyimpanan untuk markup global perusahaan NiagaRea
+  static const String _markupGlobalKey = 'niagarea_markup_global';
+
   DigiflazzConfig({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
 
@@ -45,6 +48,13 @@ class DigiflazzConfig {
     return value == 'true';
   }
 
+  /// Ambil nilai markup global NiagaRea.
+  /// Default: 0 jika belum disetel.
+  Future<int> getMarkupGlobal() async {
+    final value = await _storage.read(key: _markupGlobalKey);
+    return int.tryParse(value ?? '0') ?? 0;
+  }
+
   // ── Tulis Credential ────────────────────────────────
 
   /// Simpan username Digiflazz (terenkripsi).
@@ -58,6 +68,10 @@ class DigiflazzConfig {
   /// Set mode testing (true/false).
   Future<void> setTestMode(bool enabled) =>
       _storage.write(key: _testModeKey, value: enabled.toString());
+
+  /// Set nilai markup global NiagaRea.
+  Future<void> setMarkupGlobal(int markup) =>
+      _storage.write(key: _markupGlobalKey, value: markup.toString());
 
   /// Simpan credential sekaligus (username + API key).
   Future<void> saveCredential({
