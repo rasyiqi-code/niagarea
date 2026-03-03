@@ -80,7 +80,7 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Siklus berhasil ditambahkan! '
+            'Top-up berhasil! '
             'Saldo masuk: ${CurrencyFormatter.format(_saldoMasuk)}',
           ),
         ),
@@ -96,7 +96,7 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
     final isLoading = state is AsyncLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tambah Siklus Baru')),
+      appBar: AppBar(title: const Text('Isi Saldo / Top-up')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -106,8 +106,8 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
             TextFormField(
               controller: _namaController,
               decoration: const InputDecoration(
-                labelText: 'Nama Siklus (opsional)',
-                hintText: 'Misal: Top-up Maret 2026',
+                labelText: 'Keterangan (opsional)',
+                hintText: 'Misal: Top-up via BCA',
                 prefixIcon: Icon(Icons.label_outline),
               ),
             ),
@@ -117,7 +117,7 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
             TextFormField(
               controller: _modalController,
               decoration: const InputDecoration(
-                labelText: 'Modal Disetor ke Provider *',
+                labelText: 'Jumlah Top-up *',
                 hintText: '500000',
                 prefixIcon: Icon(Icons.payments_outlined),
                 prefixText: 'Rp ',
@@ -138,7 +138,7 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
             TextFormField(
               controller: _adminController,
               decoration: const InputDecoration(
-                labelText: 'Biaya Admin Provider',
+                labelText: 'Biaya Admin',
                 hintText: '0',
                 prefixIcon: Icon(Icons.money_off_outlined),
                 prefixText: 'Rp ',
@@ -196,6 +196,9 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
             ),
             const SizedBox(height: 32),
 
+            const SizedBox(height: 24),
+            _buildInstruksiTopup(theme),
+            const SizedBox(height: 32),
             // ── Tombol Submit ───────────────────────────
             ElevatedButton.icon(
               onPressed: isLoading ? null : _submit,
@@ -206,10 +209,66 @@ class _TambahSiklusScreenState extends ConsumerState<TambahSiklusScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.check),
-              label: Text(isLoading ? 'Menyimpan...' : 'Saya Sudah Transfer'),
+              label: Text(isLoading ? 'Memproses...' : 'Saya Sudah Transfer'),
             ),
           ],
         ),
+    );
+  }
+
+  Widget _buildInstruksiTopup(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withAlpha(50),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.primaryContainer,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Instruksi Pembayaran',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Silakan transfer sesuai nominal ke rekening berikut:',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Bank BCA\n'
+            '1234567890\n'
+            'a/n PT NiagaRea Digital',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Saldo akan otomatis aktif setelah admin melakukan verifikasi.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }

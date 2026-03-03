@@ -89,7 +89,7 @@ class _SaldoCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'SALDO INTERNAL',
+            'SALDO ANDA',
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onPrimary.withAlpha(178),
               letterSpacing: 1.5,
@@ -217,7 +217,7 @@ class _AksiCepat extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const TambahSiklusScreen()),
             ),
             icon: const Icon(Icons.add_card),
-            label: const Text('Tambah Siklus'),
+            label: const Text('Top-up Saldo'),
           ),
         ),
         const SizedBox(width: 12),
@@ -247,7 +247,7 @@ class _SiklusAktifSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'SIKLUS AKTIF',
+          'RIWAYAT MODAL / SALDO',
           style: theme.textTheme.labelMedium?.copyWith(
             letterSpacing: 1.2,
             color: theme.colorScheme.onSurface.withAlpha(153),
@@ -262,7 +262,7 @@ class _SiklusAktifSection extends ConsumerWidget {
                   padding: const EdgeInsets.all(24),
                   child: Center(
                     child: Text(
-                      'Belum ada siklus aktif.\nTambahkan siklus pertama!',
+                      'Belum ada saldo aktif.\nLakukan top-up pertama!',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withAlpha(128),
@@ -276,7 +276,7 @@ class _SiklusAktifSection extends ConsumerWidget {
             return Column(
               children: [
                 Text(
-                  '${siklusList.length} siklus aktif',
+                  '${siklusList.length} sumber modal aktif',
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: 8),
