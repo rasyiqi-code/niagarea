@@ -1,0 +1,438 @@
+/// Dashboard utama NiagaRea.
+///
+/// Menampilkan ringkasan: saldo internal, siklus aktif,
+/// dan 10 transaksi terakhir. Titik masuk ke fitur
+/// tambah siklus dan transaksi baru.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_formatter.dart';
+import '../../providers/digiflazz_provider.dart';
+import '../../providers/siklus_provider.dart';
+import '../../providers/transaksi_provider.dart';
+import '../siklus/tambah_siklus_screen.dart';
+import '../transaksi/transaksi_baru_screen.dart';
+
+/// Layar dashboard — halaman utama aplikasi.
+class DashboardScreen extends ConsumerWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Icon(Icons.bolt, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('NiagaRea'),
+          ],
+        ),
+        centerTitle: false,
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(totalSaldoInternalProvider);
+          ref.invalidate(siklusAktifProvider);
+          ref.invalidate(transaksiTerakhirProvider);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // ── Kartu Saldo Internal ──────────────────────
+            _SaldoCard(),
+            const SizedBox(height: 16),
+
+            // ── Tombol Aksi ───────────────────────────────
+            _AksiCepat(),
+            const SizedBox(height: 24),
+
+            // ── Siklus Aktif ──────────────────────────────
+            _SiklusAktifSection(),
+            const SizedBox(height: 24),
+
+            // ── Transaksi Terakhir ────────────────────────
+            _TransaksiTerakhirSection(),
+            const SizedBox(height: 80), // Padding untuk bottom nav
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Kartu saldo internal (FIFO) — highlight utama dashboard.
+/// Ditambah saldo provider untuk perbandingan.
+class _SaldoCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final saldoAsync = ref.watch(totalSaldoInternalProvider);
+    final profitAsync = ref.watch(profitHariIniProvider);
+    final saldoDgAsync = ref.watch(saldoDigiflazzProvider);
+    final isAdmin = ref.watch(isAdminModeProvider);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'SALDO INTERNAL',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onPrimary.withAlpha(178),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          saldoAsync.when(
+            data: (saldo) => Text(
+              CurrencyFormatter.format(saldo),
+              style: theme.textTheme.headlineLarge?.copyWith(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            loading: () => Text(
+              '...',
+              style: theme.textTheme.headlineLarge?.copyWith(
+                color: theme.colorScheme.onPrimary,
+              ),
+            ),
+            error: (_, _) => Text(
+              'Error',
+              style: theme.textTheme.headlineLarge?.copyWith(
+                color: AppColors.error,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                Icons.trending_up,
+                color: theme.colorScheme.onPrimary.withAlpha(178),
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              profitAsync.when(
+                data: (profit) => Text(
+                  'Profit hari ini: ${CurrencyFormatter.format(profit)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onPrimary.withAlpha(178),
+                  ),
+                ),
+                loading: () => Text(
+                  'Menghitung...',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onPrimary.withAlpha(178),
+                  ),
+                ),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+
+          // ── Saldo Provider (Hanya Admin) ──────────
+          if (isAdmin) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onPrimary.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.cloud_outlined,
+                    color: theme.colorScheme.onPrimary.withAlpha(178),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: saldoDgAsync.when(
+                      data: (saldo) => Text(
+                        saldo != null
+                            ? 'Saldo Stok: ${CurrencyFormatter.format(saldo)}'
+                            : 'Stok: belum terhubung',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onPrimary.withAlpha(178),
+                        ),
+                      ),
+                      loading: () => Text(
+                        'Mengecek stok...',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onPrimary.withAlpha(178),
+                        ),
+                      ),
+                      error: (_, _) => Text(
+                        'Stok: error',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onPrimary.withAlpha(178),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Tombol refresh saldo
+                  InkWell(
+                    onTap: () => ref.invalidate(saldoDigiflazzProvider),
+                    child: Icon(
+                      Icons.refresh,
+                      color: theme.colorScheme.onPrimary.withAlpha(178),
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Tombol aksi cepat: Tambah Siklus & Transaksi Baru.
+class _AksiCepat extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TambahSiklusScreen()),
+            ),
+            icon: const Icon(Icons.add_card),
+            label: const Text('Tambah Siklus'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TransaksiBaruScreen()),
+            ),
+            icon: const Icon(Icons.add_shopping_cart),
+            label: const Text('+ Jual'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Section siklus aktif di dashboard.
+class _SiklusAktifSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final siklusAsync = ref.watch(siklusAktifProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'SIKLUS AKTIF',
+          style: theme.textTheme.labelMedium?.copyWith(
+            letterSpacing: 1.2,
+            color: theme.colorScheme.onSurface.withAlpha(153),
+          ),
+        ),
+        const SizedBox(height: 8),
+        siklusAsync.when(
+          data: (siklusList) {
+            if (siklusList.isEmpty) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'Belum ada siklus aktif.\nTambahkan siklus pertama!',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(128),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Text(
+                  '${siklusList.length} siklus aktif',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                ...siklusList.map(
+                  (s) => Card(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: s.saldoSisa < 10000
+                            ? AppColors.warning.withAlpha(51)
+                            : theme.colorScheme.primary.withAlpha(25),
+                        child: Icon(
+                          Icons.account_balance_wallet,
+                          color: s.saldoSisa < 10000
+                              ? AppColors.warning
+                              : theme.colorScheme.primary,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        s.namaSiklus,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      subtitle: Text(
+                        DateFormatter.formatTanggal(s.tanggalMulai),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            CurrencyFormatter.format(s.saldoSisa),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (s.saldoSisa < 10000)
+                            Text(
+                              'Hampir habis',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: AppColors.warning,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Error: $e'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Section 10 transaksi terakhir di dashboard.
+class _TransaksiTerakhirSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final trxAsync = ref.watch(transaksiTerakhirProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'TRANSAKSI TERAKHIR',
+          style: theme.textTheme.labelMedium?.copyWith(
+            letterSpacing: 1.2,
+            color: theme.colorScheme.onSurface.withAlpha(153),
+          ),
+        ),
+        const SizedBox(height: 8),
+        trxAsync.when(
+          data: (trxList) {
+            if (trxList.isEmpty) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'Belum ada transaksi.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(128),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: trxList.map((item) {
+                final trx = item.transaksi;
+                final nama = item.pelanggan?.nama ?? 'Umum';
+                final isLunas = trx.statusBayar == 'lunas';
+
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isLunas
+                          ? AppColors.success.withAlpha(25)
+                          : AppColors.warning.withAlpha(25),
+                      child: Icon(
+                        isLunas ? Icons.check_circle : Icons.schedule,
+                        color: isLunas ? AppColors.success : AppColors.warning,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      trx.namaProduk,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    subtitle: Text(
+                      '$nama · ${DateFormatter.relatif(trx.createdAt)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          CurrencyFormatter.format(trx.hargaJual),
+                          style: theme.textTheme.titleSmall,
+                        ),
+                        Text(
+                          '+${CurrencyFormatter.format(trx.profit)}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.profitPositive,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Error: $e'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
