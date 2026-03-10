@@ -10,7 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../providers/digiflazz_provider.dart';
 import '../../providers/transaksi_provider.dart';
+import '../antrian/antrian_screen.dart';
 import 'transaksi_baru_screen.dart';
 
 /// Halaman riwayat transaksi.
@@ -20,10 +22,34 @@ class RiwayatTransaksiScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isAdmin = ref.watch(isAdminModeProvider);
+    final pendingAsync = ref.watch(jumlahPendingProvider);
     final trxAsync = ref.watch(transaksiTerakhirProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Riwayat Transaksi')),
+      appBar: AppBar(
+        title: const Text('Riwayat Transaksi'),
+        actions: [
+          if (isAdmin)
+            IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AntrianScreen()),
+              ),
+              icon: pendingAsync.when(
+                data: (count) => count > 0
+                    ? Badge(
+                        label: Text('$count'),
+                        child: const Icon(Icons.send_outlined),
+                      )
+                    : const Icon(Icons.send_outlined),
+                loading: () => const Icon(Icons.send_outlined),
+                error: (_, _) => const Icon(Icons.send_outlined),
+              ),
+              tooltip: 'Antrian Transaksi',
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_riwayat',
         onPressed: () => Navigator.push(

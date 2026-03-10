@@ -8,11 +8,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/digiflazz_provider.dart';
-import '../screens/antrian/antrian_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/pelanggan/pelanggan_list_screen.dart';
-import '../screens/pengaturan/pengaturan_screen.dart';
 import '../screens/produk/katalog_produk_screen.dart';
 import '../screens/statistik/statistik_screen.dart';
 import '../screens/transaksi/riwayat_transaksi_screen.dart';
@@ -30,18 +27,13 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(isAdminModeProvider);
-    final pendingAsync = ref.watch(jumlahPendingProvider);
-
-    // Filter screens and destinations based on admin mode
+    // List of screens for the indexed stack (5 main tabs)
     final List<Widget> screens = [
       const DashboardScreen(),
       const PelangganListScreen(),
       const RiwayatTransaksiScreen(),
       const KatalogProdukScreen(),
-      if (isAdmin) const AntrianScreen(),
       const StatistikScreen(),
-      const PengaturanScreen(),
     ];
 
     final destinations = [
@@ -65,36 +57,10 @@ class _AppShellState extends ConsumerState<AppShell> {
         selectedIcon: Icon(Icons.inventory_2),
         label: 'Produk',
       ),
-      if (isAdmin)
-        NavigationDestination(
-          icon: pendingAsync.when(
-            data: (count) => count > 0
-                ? Badge(
-                    label: Text('$count'),
-                    child: const Icon(Icons.send_outlined),
-                  )
-                : const Icon(Icons.send_outlined),
-            loading: () => const Icon(Icons.send_outlined),
-            error: (_, _) => const Icon(Icons.send_outlined),
-          ),
-          selectedIcon: pendingAsync.when(
-            data: (count) => count > 0
-                ? Badge(label: Text('$count'), child: const Icon(Icons.send))
-                : const Icon(Icons.send),
-            loading: () => const Icon(Icons.send),
-            error: (_, _) => const Icon(Icons.send),
-          ),
-          label: 'Antrian',
-        ),
       const NavigationDestination(
         icon: Icon(Icons.bar_chart_outlined),
         selectedIcon: Icon(Icons.bar_chart),
         label: 'Statistik',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.settings_outlined),
-        selectedIcon: Icon(Icons.settings),
-        label: 'Pengaturan',
       ),
     ];
 

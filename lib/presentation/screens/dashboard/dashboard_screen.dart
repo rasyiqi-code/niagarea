@@ -16,6 +16,7 @@ import '../../providers/siklus_provider.dart';
 import '../../providers/transaksi_provider.dart';
 import '../../providers/kotak_uang_provider.dart';
 import '../keuangan/kotak_uang_list_screen.dart';
+import '../pengaturan/pengaturan_screen.dart';
 import '../siklus/tambah_siklus_screen.dart';
 import '../transaksi/transaksi_baru_screen.dart';
 
@@ -37,6 +38,15 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
         centerTitle: false,
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PengaturanScreen()),
+            ),
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -66,7 +76,7 @@ class DashboardScreen extends ConsumerWidget {
 
             // ── Transaksi Terakhir ────────────────────────
             _TransaksiTerakhirSection(),
-            const SizedBox(height: 80), // Padding untuk bottom nav
+            const SizedBox(height: 16),
           ],
         ),
       ),
