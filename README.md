@@ -1,14 +1,14 @@
 # ⚡ NiagaRea
 
-**NiagaRea** adalah aplikasi **Pencatatan & Penjualan Pulsa/Token** berbasis mobile yang dirancang dengan model bisnis **Aggregator B2B**. Aplikasi ini memungkinkan pemilik usaha (NiagaRea) menyediakan stok pulsa kepada jaringan Reseller/Counter Owner dengan sistem pencatatan yang akurat, mandiri, dan *Offline-First*.
+**NiagaRea** adalah aplikasi **Buku Ledger (Pencatatan) Pulsa Digital** berbasis mobile yang dirancang khusus untuk pemilik konter. Aplikasi ini memungkinkan pengguna mencatat transaksi penjualan pulsa/token secara mandiri dengan akurasi tinggi (FIFO), sambil menyediakan akses mudah ke stok produk dari NiagaRea sebagai solusi pengadaan barang.
 
-## 📖 Konsep Bisnis NiagaRea
+## 📖 Konsep NiagaRea: Catat & Jual
 
-Aplikasi ini beroperasi dengan alur kerja sebagai berikut:
-1.  **NiagaRea sebagai Provider**: NiagaRea menyetor deposit besar ke provider stok (Digiflazz) sebagai modal master.
-2.  **User (Counter Owner)**: Reseller melakukan top-up dana ke rekening NiagaRea. Dana ini kemudian dicatat sebagai **Saldo/Modal** mereka di aplikasi.
-3.  **Mekanisme Markup**: Admin can set a global profit margin. Saat sinkronisasi produk, "Harga Beli" yang dilihat Reseller sudah mencakup markup keuntungan untuk NiagaRea.
-4.  **Perhitungan Profit (FIFO)**: Keuntungan Reseller dihitung secara otomatis berdasarkan selisih Harga Jual dan Modal (FIFO), memastikan data keuangan yang sangat akurat.
+Aplikasi ini beroperasi dengan filosofi "Pencatatan Dulu, Transaksi Kemudian":
+1.  **Asisten Pencatatan Mandiri**: Fokus utama adalah sebagai buku catatan digital bagi pemilik konter untuk melacak modal, harga jual, dan profit secara akurat.
+2.  **Penyedia Produk (Monetisasi)**: NiagaRea bertindak sebagai supplier produk digital (via Digiflazz). User dapat membeli stok dari NiagaRea untuk dijual kembali melalui aplikasi ini.
+3.  **Transparansi Modal & Markup**: Harga beli yang ditampilkan kepada Reseller sudah mencakup markup keuntungan NiagaRea, memudahkan Reseller mengetahui "Modal Bersih" mereka.
+4.  **Akurasi Keuntungan (FIFO)**: Keuntungan dihitung otomatis berdasarkan stok deposit yang digunakan, memastikan pembukuan konter selalu beres.
 
 ## ✅ Fitur yang Sudah Diimplementasikan
 
