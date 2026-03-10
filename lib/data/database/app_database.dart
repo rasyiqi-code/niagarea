@@ -84,7 +84,10 @@ class AppDatabase extends _$AppDatabase {
         );
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // TODO: Tambahkan migrasi saat schema berubah
+        if (from < 2) {
+          // Tambahkan kolom saldo_piutang ke tabel pelanggan
+          await m.addColumn(pelangganTable, pelangganTable.saldoPiutang);
+        }
       },
     );
   }

@@ -64,6 +64,18 @@ class PelangganDao extends DatabaseAccessor<AppDatabase>
         .then((rows) => rows > 0);
   }
 
+  /// Update saldo piutang (tambah/kurang)
+  Future<void> updateSaldoPiutang(int id, int amount) async {
+    final current = await ambilPelangganById(id);
+    if (current == null) return;
+
+    await (update(pelangganTable)..where((t) => t.id.equals(id))).write(
+      PelangganTableCompanion(
+        saldoPiutang: Value(current.saldoPiutang + amount),
+      ),
+    );
+  }
+
   // ── DELETE ──────────────────────────────────────────────
 
   /// Hapus pelanggan berdasarkan ID.

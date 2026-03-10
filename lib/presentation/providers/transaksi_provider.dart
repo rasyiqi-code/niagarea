@@ -29,6 +29,13 @@ final totalPiutangProvider = FutureProvider<int>((ref) {
   return db.transaksiDao.hitungTotalPiutang();
 });
 
+/// Stream provider transaksi per pelanggan.
+final transaksiPelangganProvider =
+    StreamProvider.family<List<TransaksiDenganInfo>, int>((ref, idPelanggan) {
+      final db = ref.watch(databaseProvider);
+      return db.transaksiDao.watchTransaksiPelanggan(idPelanggan);
+    });
+
 /// Future provider total profit hari ini.
 final profitHariIniProvider = FutureProvider<int>((ref) {
   final db = ref.watch(databaseProvider);
@@ -100,6 +107,11 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
         await _db.kotakUangDao.updateSaldo(idKotakUang, hargaJual);
       }
 
+      // 1.2. Update saldo Piutang jika utang
+      if (statusBayar == 'utang' && idPelanggan != null) {
+        await _db.pelangganDao.updateSaldoPiutang(idPelanggan, hargaJual);
+      }
+
       // 2. Konsumsi saldo FIFO
       try {
         await _fifoEngine.konsumsiSaldo(
@@ -159,6 +171,14 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
       // Rollback saldo Kotak Uang jika lunas
       if (trx.statusBayar == 'lunas' && trx.idKotakUang != null) {
         await _db.kotakUangDao.updateSaldo(trx.idKotakUang!, -trx.hargaJual);
+      }
+
+      // Rollback saldo Piutang jika utang
+      if (trx.statusBayar == 'utang' && trx.idPelanggan != null) {
+        await _db.pelangganDao.updateSaldoPiutang(
+          trx.idPelanggan!,
+          -trx.hargaJual,
+        );
       }
 
       await _fifoEngine.rollbackKonsumsi(idTransaksi);

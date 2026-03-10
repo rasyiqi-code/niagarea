@@ -96,6 +96,33 @@ class TransaksiDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
+  /// Stream transaksi khusus pelanggan tertentu (reactive).
+  Stream<List<TransaksiDenganInfo>> watchTransaksiPelanggan(int idPelanggan) {
+    final query =
+        select(transaksiTable).join([
+            leftOuterJoin(
+              pelangganTable,
+              pelangganTable.id.equalsExp(transaksiTable.idPelanggan),
+            ),
+            leftOuterJoin(
+              kotakUangTable,
+              kotakUangTable.id.equalsExp(transaksiTable.idKotakUang),
+            ),
+          ])
+          ..where(transaksiTable.idPelanggan.equals(idPelanggan))
+          ..orderBy([OrderingTerm.desc(transaksiTable.createdAt)]);
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return TransaksiDenganInfo(
+          transaksi: row.readTable(transaksiTable),
+          pelanggan: row.readTableOrNull(pelangganTable),
+          kotakUang: row.readTableOrNull(kotakUangTable),
+        );
+      }).toList();
+    });
+  }
+
   /// Ambil transaksi berdasarkan rentang tanggal.
   Future<List<TransaksiDenganInfo>> ambilTransaksiByTanggal(
     DateTime dari,

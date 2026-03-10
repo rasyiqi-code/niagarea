@@ -20,6 +20,12 @@ final pelangganProvider = StreamProvider<List<Pelanggan>>((ref) {
   return db.pelangganDao.watchSemuaPelanggan();
 });
 
+/// Future provider satu pelanggan berdasarkan ID.
+final pelangganByIdProvider = FutureProvider.family<Pelanggan?, int>((ref, id) {
+  final db = ref.watch(databaseProvider);
+  return db.pelangganDao.ambilPelangganById(id);
+});
+
 /// Notifier untuk operasi CRUD pelanggan.
 class PelangganNotifier extends StateNotifier<AsyncValue<void>> {
   final AppDatabase _db;

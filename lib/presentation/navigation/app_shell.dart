@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/digiflazz_provider.dart';
 import '../screens/antrian/antrian_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/pelanggan/pelanggan_list_screen.dart';
 import '../screens/pengaturan/pengaturan_screen.dart';
 import '../screens/produk/katalog_produk_screen.dart';
 import '../screens/statistik/statistik_screen.dart';
@@ -35,6 +36,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     // Filter screens and destinations based on admin mode
     final List<Widget> screens = [
       const DashboardScreen(),
+      const PelangganListScreen(),
       const RiwayatTransaksiScreen(),
       const KatalogProdukScreen(),
       if (isAdmin) const AntrianScreen(),
@@ -47,6 +49,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         icon: Icon(Icons.dashboard_outlined),
         selectedIcon: Icon(Icons.dashboard),
         label: 'Dashboard',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.people_outlined),
+        selectedIcon: Icon(Icons.people),
+        label: 'Pelanggan',
       ),
       const NavigationDestination(
         icon: Icon(Icons.receipt_long_outlined),

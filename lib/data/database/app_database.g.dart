@@ -1319,6 +1319,18 @@ class $PelangganTableTable extends PelangganTable
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _saldoPiutangMeta = const VerificationMeta(
+    'saldoPiutang',
+  );
+  @override
+  late final GeneratedColumn<int> saldoPiutang = GeneratedColumn<int>(
+    'saldo_piutang',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1332,7 +1344,14 @@ class $PelangganTableTable extends PelangganTable
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, nama, noHp, catatan, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    nama,
+    noHp,
+    catatan,
+    saldoPiutang,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1368,6 +1387,15 @@ class $PelangganTableTable extends PelangganTable
         catatan.isAcceptableOrUnknown(data['catatan']!, _catatanMeta),
       );
     }
+    if (data.containsKey('saldo_piutang')) {
+      context.handle(
+        _saldoPiutangMeta,
+        saldoPiutang.isAcceptableOrUnknown(
+          data['saldo_piutang']!,
+          _saldoPiutangMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1399,6 +1427,10 @@ class $PelangganTableTable extends PelangganTable
         DriftSqlType.string,
         data['${effectivePrefix}catatan'],
       )!,
+      saldoPiutang: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}saldo_piutang'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1425,6 +1457,9 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
   /// Catatan tambahan (opsional)
   final String catatan;
 
+  /// Saldo piutang (hutang) pelanggan
+  final int saldoPiutang;
+
   /// Tanggal pelanggan ditambahkan
   final DateTime createdAt;
   const Pelanggan({
@@ -1432,6 +1467,7 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
     required this.nama,
     required this.noHp,
     required this.catatan,
+    required this.saldoPiutang,
     required this.createdAt,
   });
   @override
@@ -1441,6 +1477,7 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
     map['nama'] = Variable<String>(nama);
     map['no_hp'] = Variable<String>(noHp);
     map['catatan'] = Variable<String>(catatan);
+    map['saldo_piutang'] = Variable<int>(saldoPiutang);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1451,6 +1488,7 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
       nama: Value(nama),
       noHp: Value(noHp),
       catatan: Value(catatan),
+      saldoPiutang: Value(saldoPiutang),
       createdAt: Value(createdAt),
     );
   }
@@ -1465,6 +1503,7 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
       nama: serializer.fromJson<String>(json['nama']),
       noHp: serializer.fromJson<String>(json['noHp']),
       catatan: serializer.fromJson<String>(json['catatan']),
+      saldoPiutang: serializer.fromJson<int>(json['saldoPiutang']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1476,6 +1515,7 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
       'nama': serializer.toJson<String>(nama),
       'noHp': serializer.toJson<String>(noHp),
       'catatan': serializer.toJson<String>(catatan),
+      'saldoPiutang': serializer.toJson<int>(saldoPiutang),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1485,12 +1525,14 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
     String? nama,
     String? noHp,
     String? catatan,
+    int? saldoPiutang,
     DateTime? createdAt,
   }) => Pelanggan(
     id: id ?? this.id,
     nama: nama ?? this.nama,
     noHp: noHp ?? this.noHp,
     catatan: catatan ?? this.catatan,
+    saldoPiutang: saldoPiutang ?? this.saldoPiutang,
     createdAt: createdAt ?? this.createdAt,
   );
   Pelanggan copyWithCompanion(PelangganTableCompanion data) {
@@ -1499,6 +1541,9 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
       nama: data.nama.present ? data.nama.value : this.nama,
       noHp: data.noHp.present ? data.noHp.value : this.noHp,
       catatan: data.catatan.present ? data.catatan.value : this.catatan,
+      saldoPiutang: data.saldoPiutang.present
+          ? data.saldoPiutang.value
+          : this.saldoPiutang,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1510,13 +1555,15 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
           ..write('nama: $nama, ')
           ..write('noHp: $noHp, ')
           ..write('catatan: $catatan, ')
+          ..write('saldoPiutang: $saldoPiutang, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, nama, noHp, catatan, createdAt);
+  int get hashCode =>
+      Object.hash(id, nama, noHp, catatan, saldoPiutang, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1525,6 +1572,7 @@ class Pelanggan extends DataClass implements Insertable<Pelanggan> {
           other.nama == this.nama &&
           other.noHp == this.noHp &&
           other.catatan == this.catatan &&
+          other.saldoPiutang == this.saldoPiutang &&
           other.createdAt == this.createdAt);
 }
 
@@ -1533,12 +1581,14 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
   final Value<String> nama;
   final Value<String> noHp;
   final Value<String> catatan;
+  final Value<int> saldoPiutang;
   final Value<DateTime> createdAt;
   const PelangganTableCompanion({
     this.id = const Value.absent(),
     this.nama = const Value.absent(),
     this.noHp = const Value.absent(),
     this.catatan = const Value.absent(),
+    this.saldoPiutang = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   PelangganTableCompanion.insert({
@@ -1546,6 +1596,7 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
     required String nama,
     this.noHp = const Value.absent(),
     this.catatan = const Value.absent(),
+    this.saldoPiutang = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : nama = Value(nama);
   static Insertable<Pelanggan> custom({
@@ -1553,6 +1604,7 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
     Expression<String>? nama,
     Expression<String>? noHp,
     Expression<String>? catatan,
+    Expression<int>? saldoPiutang,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -1560,6 +1612,7 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
       if (nama != null) 'nama': nama,
       if (noHp != null) 'no_hp': noHp,
       if (catatan != null) 'catatan': catatan,
+      if (saldoPiutang != null) 'saldo_piutang': saldoPiutang,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1569,6 +1622,7 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
     Value<String>? nama,
     Value<String>? noHp,
     Value<String>? catatan,
+    Value<int>? saldoPiutang,
     Value<DateTime>? createdAt,
   }) {
     return PelangganTableCompanion(
@@ -1576,6 +1630,7 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
       nama: nama ?? this.nama,
       noHp: noHp ?? this.noHp,
       catatan: catatan ?? this.catatan,
+      saldoPiutang: saldoPiutang ?? this.saldoPiutang,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1595,6 +1650,9 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
     if (catatan.present) {
       map['catatan'] = Variable<String>(catatan.value);
     }
+    if (saldoPiutang.present) {
+      map['saldo_piutang'] = Variable<int>(saldoPiutang.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1608,6 +1666,7 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
           ..write('nama: $nama, ')
           ..write('noHp: $noHp, ')
           ..write('catatan: $catatan, ')
+          ..write('saldoPiutang: $saldoPiutang, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -4531,6 +4590,7 @@ typedef $$PelangganTableTableCreateCompanionBuilder =
       required String nama,
       Value<String> noHp,
       Value<String> catatan,
+      Value<int> saldoPiutang,
       Value<DateTime> createdAt,
     });
 typedef $$PelangganTableTableUpdateCompanionBuilder =
@@ -4539,6 +4599,7 @@ typedef $$PelangganTableTableUpdateCompanionBuilder =
       Value<String> nama,
       Value<String> noHp,
       Value<String> catatan,
+      Value<int> saldoPiutang,
       Value<DateTime> createdAt,
     });
 
@@ -4598,6 +4659,11 @@ class $$PelangganTableTableFilterComposer
 
   ColumnFilters<String> get catatan => $composableBuilder(
     column: $table.catatan,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get saldoPiutang => $composableBuilder(
+    column: $table.saldoPiutang,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4661,6 +4727,11 @@ class $$PelangganTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get saldoPiutang => $composableBuilder(
+    column: $table.saldoPiutang,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4687,6 +4758,11 @@ class $$PelangganTableTableAnnotationComposer
 
   GeneratedColumn<String> get catatan =>
       $composableBuilder(column: $table.catatan, builder: (column) => column);
+
+  GeneratedColumn<int> get saldoPiutang => $composableBuilder(
+    column: $table.saldoPiutang,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -4751,12 +4827,14 @@ class $$PelangganTableTableTableManager
                 Value<String> nama = const Value.absent(),
                 Value<String> noHp = const Value.absent(),
                 Value<String> catatan = const Value.absent(),
+                Value<int> saldoPiutang = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => PelangganTableCompanion(
                 id: id,
                 nama: nama,
                 noHp: noHp,
                 catatan: catatan,
+                saldoPiutang: saldoPiutang,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -4765,12 +4843,14 @@ class $$PelangganTableTableTableManager
                 required String nama,
                 Value<String> noHp = const Value.absent(),
                 Value<String> catatan = const Value.absent(),
+                Value<int> saldoPiutang = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => PelangganTableCompanion.insert(
                 id: id,
                 nama: nama,
                 noHp: noHp,
                 catatan: catatan,
+                saldoPiutang: saldoPiutang,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

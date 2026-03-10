@@ -22,7 +22,7 @@ class AppConstants {
   static const String databaseName = 'niagarea.db';
 
   /// Versi skema database (increment saat migrasi)
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2;
 }
 
 /// Konstanta status siklus deposit.

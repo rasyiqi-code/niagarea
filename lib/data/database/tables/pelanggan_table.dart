@@ -24,6 +24,9 @@ class PelangganTable extends Table {
   /// Catatan tambahan (opsional)
   TextColumn get catatan => text().withDefault(const Constant(''))();
 
+  /// Saldo piutang (hutang) pelanggan
+  IntColumn get saldoPiutang => integer().withDefault(const Constant(0))();
+
   /// Tanggal pelanggan ditambahkan
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
