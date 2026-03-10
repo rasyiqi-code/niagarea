@@ -46,6 +46,7 @@ class KatalogProdukScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_katalog',
         onPressed: () => _showTambahProdukDialog(context, ref),
         child: const Icon(Icons.add),
       ),

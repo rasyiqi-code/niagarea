@@ -25,6 +25,7 @@ class RiwayatTransaksiScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Riwayat Transaksi')),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_riwayat',
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const TransaksiBaruScreen()),

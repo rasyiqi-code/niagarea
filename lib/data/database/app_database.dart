@@ -52,7 +52,16 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(driftDatabase(name: AppConstants.databaseName));
+  AppDatabase()
+    : super(
+        driftDatabase(
+          name: AppConstants.databaseName,
+          web: DriftWebOptions(
+            sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+            driftWorker: Uri.parse('drift_worker.js'),
+          ),
+        ),
+      );
 
   /// Constructor untuk testing — terima executor dari luar
   AppDatabase.forTesting(super.e);

@@ -4,7 +4,6 @@ import 'package:niagarea/data/database/app_database.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:sqlite3/open.dart';
 import 'dart:ffi';
-import 'dart:io';
 
 void main() {
   open.overrideFor(OperatingSystem.linux, () {
