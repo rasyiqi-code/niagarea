@@ -1614,6 +1614,417 @@ class PelangganTableCompanion extends UpdateCompanion<Pelanggan> {
   }
 }
 
+class $KotakUangTableTable extends KotakUangTable
+    with TableInfo<$KotakUangTableTable, KotakUang> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $KotakUangTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _namaMeta = const VerificationMeta('nama');
+  @override
+  late final GeneratedColumn<String> nama = GeneratedColumn<String>(
+    'nama',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _saldoMeta = const VerificationMeta('saldo');
+  @override
+  late final GeneratedColumn<int> saldo = GeneratedColumn<int>(
+    'saldo',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _iconCodeMeta = const VerificationMeta(
+    'iconCode',
+  );
+  @override
+  late final GeneratedColumn<int> iconCode = GeneratedColumn<int>(
+    'icon_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _colorValueMeta = const VerificationMeta(
+    'colorValue',
+  );
+  @override
+  late final GeneratedColumn<int> colorValue = GeneratedColumn<int>(
+    'color_value',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nama,
+    saldo,
+    iconCode,
+    colorValue,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'kotak_uang';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<KotakUang> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('nama')) {
+      context.handle(
+        _namaMeta,
+        nama.isAcceptableOrUnknown(data['nama']!, _namaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_namaMeta);
+    }
+    if (data.containsKey('saldo')) {
+      context.handle(
+        _saldoMeta,
+        saldo.isAcceptableOrUnknown(data['saldo']!, _saldoMeta),
+      );
+    }
+    if (data.containsKey('icon_code')) {
+      context.handle(
+        _iconCodeMeta,
+        iconCode.isAcceptableOrUnknown(data['icon_code']!, _iconCodeMeta),
+      );
+    }
+    if (data.containsKey('color_value')) {
+      context.handle(
+        _colorValueMeta,
+        colorValue.isAcceptableOrUnknown(data['color_value']!, _colorValueMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  KotakUang map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return KotakUang(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      nama: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nama'],
+      )!,
+      saldo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}saldo'],
+      )!,
+      iconCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}icon_code'],
+      ),
+      colorValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color_value'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $KotakUangTableTable createAlias(String alias) {
+    return $KotakUangTableTable(attachedDatabase, alias);
+  }
+}
+
+class KotakUang extends DataClass implements Insertable<KotakUang> {
+  /// ID auto-increment
+  final int id;
+
+  /// Nama wadah uang, misal "Laci Tunai", "Bank BCA", "QRIS Dana"
+  final String nama;
+
+  /// Saldo kumulatif di kotak ini (dalam Rupiah)
+  final int saldo;
+
+  /// Kode icon (MaterialIcons) untuk representasi visual
+  final int? iconCode;
+
+  /// Warna representasi (hex)
+  final int? colorValue;
+
+  /// Waktu dibuat
+  final DateTime createdAt;
+  const KotakUang({
+    required this.id,
+    required this.nama,
+    required this.saldo,
+    this.iconCode,
+    this.colorValue,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['nama'] = Variable<String>(nama);
+    map['saldo'] = Variable<int>(saldo);
+    if (!nullToAbsent || iconCode != null) {
+      map['icon_code'] = Variable<int>(iconCode);
+    }
+    if (!nullToAbsent || colorValue != null) {
+      map['color_value'] = Variable<int>(colorValue);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  KotakUangTableCompanion toCompanion(bool nullToAbsent) {
+    return KotakUangTableCompanion(
+      id: Value(id),
+      nama: Value(nama),
+      saldo: Value(saldo),
+      iconCode: iconCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconCode),
+      colorValue: colorValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorValue),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory KotakUang.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return KotakUang(
+      id: serializer.fromJson<int>(json['id']),
+      nama: serializer.fromJson<String>(json['nama']),
+      saldo: serializer.fromJson<int>(json['saldo']),
+      iconCode: serializer.fromJson<int?>(json['iconCode']),
+      colorValue: serializer.fromJson<int?>(json['colorValue']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'nama': serializer.toJson<String>(nama),
+      'saldo': serializer.toJson<int>(saldo),
+      'iconCode': serializer.toJson<int?>(iconCode),
+      'colorValue': serializer.toJson<int?>(colorValue),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  KotakUang copyWith({
+    int? id,
+    String? nama,
+    int? saldo,
+    Value<int?> iconCode = const Value.absent(),
+    Value<int?> colorValue = const Value.absent(),
+    DateTime? createdAt,
+  }) => KotakUang(
+    id: id ?? this.id,
+    nama: nama ?? this.nama,
+    saldo: saldo ?? this.saldo,
+    iconCode: iconCode.present ? iconCode.value : this.iconCode,
+    colorValue: colorValue.present ? colorValue.value : this.colorValue,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  KotakUang copyWithCompanion(KotakUangTableCompanion data) {
+    return KotakUang(
+      id: data.id.present ? data.id.value : this.id,
+      nama: data.nama.present ? data.nama.value : this.nama,
+      saldo: data.saldo.present ? data.saldo.value : this.saldo,
+      iconCode: data.iconCode.present ? data.iconCode.value : this.iconCode,
+      colorValue: data.colorValue.present
+          ? data.colorValue.value
+          : this.colorValue,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KotakUang(')
+          ..write('id: $id, ')
+          ..write('nama: $nama, ')
+          ..write('saldo: $saldo, ')
+          ..write('iconCode: $iconCode, ')
+          ..write('colorValue: $colorValue, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, nama, saldo, iconCode, colorValue, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KotakUang &&
+          other.id == this.id &&
+          other.nama == this.nama &&
+          other.saldo == this.saldo &&
+          other.iconCode == this.iconCode &&
+          other.colorValue == this.colorValue &&
+          other.createdAt == this.createdAt);
+}
+
+class KotakUangTableCompanion extends UpdateCompanion<KotakUang> {
+  final Value<int> id;
+  final Value<String> nama;
+  final Value<int> saldo;
+  final Value<int?> iconCode;
+  final Value<int?> colorValue;
+  final Value<DateTime> createdAt;
+  const KotakUangTableCompanion({
+    this.id = const Value.absent(),
+    this.nama = const Value.absent(),
+    this.saldo = const Value.absent(),
+    this.iconCode = const Value.absent(),
+    this.colorValue = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  KotakUangTableCompanion.insert({
+    this.id = const Value.absent(),
+    required String nama,
+    this.saldo = const Value.absent(),
+    this.iconCode = const Value.absent(),
+    this.colorValue = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : nama = Value(nama);
+  static Insertable<KotakUang> custom({
+    Expression<int>? id,
+    Expression<String>? nama,
+    Expression<int>? saldo,
+    Expression<int>? iconCode,
+    Expression<int>? colorValue,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nama != null) 'nama': nama,
+      if (saldo != null) 'saldo': saldo,
+      if (iconCode != null) 'icon_code': iconCode,
+      if (colorValue != null) 'color_value': colorValue,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  KotakUangTableCompanion copyWith({
+    Value<int>? id,
+    Value<String>? nama,
+    Value<int>? saldo,
+    Value<int?>? iconCode,
+    Value<int?>? colorValue,
+    Value<DateTime>? createdAt,
+  }) {
+    return KotakUangTableCompanion(
+      id: id ?? this.id,
+      nama: nama ?? this.nama,
+      saldo: saldo ?? this.saldo,
+      iconCode: iconCode ?? this.iconCode,
+      colorValue: colorValue ?? this.colorValue,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (nama.present) {
+      map['nama'] = Variable<String>(nama.value);
+    }
+    if (saldo.present) {
+      map['saldo'] = Variable<int>(saldo.value);
+    }
+    if (iconCode.present) {
+      map['icon_code'] = Variable<int>(iconCode.value);
+    }
+    if (colorValue.present) {
+      map['color_value'] = Variable<int>(colorValue.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KotakUangTableCompanion(')
+          ..write('id: $id, ')
+          ..write('nama: $nama, ')
+          ..write('saldo: $saldo, ')
+          ..write('iconCode: $iconCode, ')
+          ..write('colorValue: $colorValue, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $TransaksiTableTable extends TransaksiTable
     with TableInfo<$TransaksiTableTable, Transaksi> {
   @override
@@ -1659,6 +2070,20 @@ class $TransaksiTableTable extends TransaksiTable
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'REFERENCES produk (id)',
+    ),
+  );
+  static const VerificationMeta _idKotakUangMeta = const VerificationMeta(
+    'idKotakUang',
+  );
+  @override
+  late final GeneratedColumn<int> idKotakUang = GeneratedColumn<int>(
+    'id_kotak_uang',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES kotak_uang (id)',
     ),
   );
   static const VerificationMeta _namaProdukMeta = const VerificationMeta(
@@ -1767,6 +2192,7 @@ class $TransaksiTableTable extends TransaksiTable
     id,
     idPelanggan,
     idProduk,
+    idKotakUang,
     namaProduk,
     hargaBeli,
     hargaJual,
@@ -1805,6 +2231,15 @@ class $TransaksiTableTable extends TransaksiTable
       context.handle(
         _idProdukMeta,
         idProduk.isAcceptableOrUnknown(data['id_produk']!, _idProdukMeta),
+      );
+    }
+    if (data.containsKey('id_kotak_uang')) {
+      context.handle(
+        _idKotakUangMeta,
+        idKotakUang.isAcceptableOrUnknown(
+          data['id_kotak_uang']!,
+          _idKotakUangMeta,
+        ),
       );
     }
     if (data.containsKey('nama_produk')) {
@@ -1894,6 +2329,10 @@ class $TransaksiTableTable extends TransaksiTable
         DriftSqlType.int,
         data['${effectivePrefix}id_produk'],
       ),
+      idKotakUang: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_kotak_uang'],
+      ),
       namaProduk: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}nama_produk'],
@@ -1949,6 +2388,9 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
   /// FK ke produk (nullable — referensi bisa hilang)
   final int? idProduk;
 
+  /// FK ke kotak uang (nullable - jika transaksi lama atau dihapus)
+  final int? idKotakUang;
+
   /// Nama produk (disimpan snapshot agar tetap ada walau produk dihapus)
   final String namaProduk;
 
@@ -1979,6 +2421,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
     required this.id,
     this.idPelanggan,
     this.idProduk,
+    this.idKotakUang,
     required this.namaProduk,
     required this.hargaBeli,
     required this.hargaJual,
@@ -1998,6 +2441,9 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
     }
     if (!nullToAbsent || idProduk != null) {
       map['id_produk'] = Variable<int>(idProduk);
+    }
+    if (!nullToAbsent || idKotakUang != null) {
+      map['id_kotak_uang'] = Variable<int>(idKotakUang);
     }
     map['nama_produk'] = Variable<String>(namaProduk);
     map['harga_beli'] = Variable<int>(hargaBeli);
@@ -2020,6 +2466,9 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
       idProduk: idProduk == null && nullToAbsent
           ? const Value.absent()
           : Value(idProduk),
+      idKotakUang: idKotakUang == null && nullToAbsent
+          ? const Value.absent()
+          : Value(idKotakUang),
       namaProduk: Value(namaProduk),
       hargaBeli: Value(hargaBeli),
       hargaJual: Value(hargaJual),
@@ -2041,6 +2490,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
       id: serializer.fromJson<int>(json['id']),
       idPelanggan: serializer.fromJson<int?>(json['idPelanggan']),
       idProduk: serializer.fromJson<int?>(json['idProduk']),
+      idKotakUang: serializer.fromJson<int?>(json['idKotakUang']),
       namaProduk: serializer.fromJson<String>(json['namaProduk']),
       hargaBeli: serializer.fromJson<int>(json['hargaBeli']),
       hargaJual: serializer.fromJson<int>(json['hargaJual']),
@@ -2059,6 +2509,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
       'id': serializer.toJson<int>(id),
       'idPelanggan': serializer.toJson<int?>(idPelanggan),
       'idProduk': serializer.toJson<int?>(idProduk),
+      'idKotakUang': serializer.toJson<int?>(idKotakUang),
       'namaProduk': serializer.toJson<String>(namaProduk),
       'hargaBeli': serializer.toJson<int>(hargaBeli),
       'hargaJual': serializer.toJson<int>(hargaJual),
@@ -2075,6 +2526,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
     int? id,
     Value<int?> idPelanggan = const Value.absent(),
     Value<int?> idProduk = const Value.absent(),
+    Value<int?> idKotakUang = const Value.absent(),
     String? namaProduk,
     int? hargaBeli,
     int? hargaJual,
@@ -2088,6 +2540,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
     id: id ?? this.id,
     idPelanggan: idPelanggan.present ? idPelanggan.value : this.idPelanggan,
     idProduk: idProduk.present ? idProduk.value : this.idProduk,
+    idKotakUang: idKotakUang.present ? idKotakUang.value : this.idKotakUang,
     namaProduk: namaProduk ?? this.namaProduk,
     hargaBeli: hargaBeli ?? this.hargaBeli,
     hargaJual: hargaJual ?? this.hargaJual,
@@ -2105,6 +2558,9 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
           ? data.idPelanggan.value
           : this.idPelanggan,
       idProduk: data.idProduk.present ? data.idProduk.value : this.idProduk,
+      idKotakUang: data.idKotakUang.present
+          ? data.idKotakUang.value
+          : this.idKotakUang,
       namaProduk: data.namaProduk.present
           ? data.namaProduk.value
           : this.namaProduk,
@@ -2129,6 +2585,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
           ..write('id: $id, ')
           ..write('idPelanggan: $idPelanggan, ')
           ..write('idProduk: $idProduk, ')
+          ..write('idKotakUang: $idKotakUang, ')
           ..write('namaProduk: $namaProduk, ')
           ..write('hargaBeli: $hargaBeli, ')
           ..write('hargaJual: $hargaJual, ')
@@ -2147,6 +2604,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
     id,
     idPelanggan,
     idProduk,
+    idKotakUang,
     namaProduk,
     hargaBeli,
     hargaJual,
@@ -2164,6 +2622,7 @@ class Transaksi extends DataClass implements Insertable<Transaksi> {
           other.id == this.id &&
           other.idPelanggan == this.idPelanggan &&
           other.idProduk == this.idProduk &&
+          other.idKotakUang == this.idKotakUang &&
           other.namaProduk == this.namaProduk &&
           other.hargaBeli == this.hargaBeli &&
           other.hargaJual == this.hargaJual &&
@@ -2179,6 +2638,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
   final Value<int> id;
   final Value<int?> idPelanggan;
   final Value<int?> idProduk;
+  final Value<int?> idKotakUang;
   final Value<String> namaProduk;
   final Value<int> hargaBeli;
   final Value<int> hargaJual;
@@ -2192,6 +2652,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
     this.id = const Value.absent(),
     this.idPelanggan = const Value.absent(),
     this.idProduk = const Value.absent(),
+    this.idKotakUang = const Value.absent(),
     this.namaProduk = const Value.absent(),
     this.hargaBeli = const Value.absent(),
     this.hargaJual = const Value.absent(),
@@ -2206,6 +2667,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
     this.id = const Value.absent(),
     this.idPelanggan = const Value.absent(),
     this.idProduk = const Value.absent(),
+    this.idKotakUang = const Value.absent(),
     this.namaProduk = const Value.absent(),
     required int hargaBeli,
     required int hargaJual,
@@ -2222,6 +2684,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
     Expression<int>? id,
     Expression<int>? idPelanggan,
     Expression<int>? idProduk,
+    Expression<int>? idKotakUang,
     Expression<String>? namaProduk,
     Expression<int>? hargaBeli,
     Expression<int>? hargaJual,
@@ -2236,6 +2699,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
       if (id != null) 'id': id,
       if (idPelanggan != null) 'id_pelanggan': idPelanggan,
       if (idProduk != null) 'id_produk': idProduk,
+      if (idKotakUang != null) 'id_kotak_uang': idKotakUang,
       if (namaProduk != null) 'nama_produk': namaProduk,
       if (hargaBeli != null) 'harga_beli': hargaBeli,
       if (hargaJual != null) 'harga_jual': hargaJual,
@@ -2252,6 +2716,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
     Value<int>? id,
     Value<int?>? idPelanggan,
     Value<int?>? idProduk,
+    Value<int?>? idKotakUang,
     Value<String>? namaProduk,
     Value<int>? hargaBeli,
     Value<int>? hargaJual,
@@ -2266,6 +2731,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
       id: id ?? this.id,
       idPelanggan: idPelanggan ?? this.idPelanggan,
       idProduk: idProduk ?? this.idProduk,
+      idKotakUang: idKotakUang ?? this.idKotakUang,
       namaProduk: namaProduk ?? this.namaProduk,
       hargaBeli: hargaBeli ?? this.hargaBeli,
       hargaJual: hargaJual ?? this.hargaJual,
@@ -2289,6 +2755,9 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
     }
     if (idProduk.present) {
       map['id_produk'] = Variable<int>(idProduk.value);
+    }
+    if (idKotakUang.present) {
+      map['id_kotak_uang'] = Variable<int>(idKotakUang.value);
     }
     if (namaProduk.present) {
       map['nama_produk'] = Variable<String>(namaProduk.value);
@@ -2326,6 +2795,7 @@ class TransaksiTableCompanion extends UpdateCompanion<Transaksi> {
           ..write('id: $id, ')
           ..write('idPelanggan: $idPelanggan, ')
           ..write('idProduk: $idProduk, ')
+          ..write('idKotakUang: $idKotakUang, ')
           ..write('namaProduk: $namaProduk, ')
           ..write('hargaBeli: $hargaBeli, ')
           ..write('hargaJual: $hargaJual, ')
@@ -3206,6 +3676,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SiklusTableTable siklusTable = $SiklusTableTable(this);
   late final $ProdukTableTable produkTable = $ProdukTableTable(this);
   late final $PelangganTableTable pelangganTable = $PelangganTableTable(this);
+  late final $KotakUangTableTable kotakUangTable = $KotakUangTableTable(this);
   late final $TransaksiTableTable transaksiTable = $TransaksiTableTable(this);
   late final $DetailKonsumsiSiklusTableTable detailKonsumsiSiklusTable =
       $DetailKonsumsiSiklusTableTable(this);
@@ -3219,6 +3690,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final AntrianDao antrianDao = AntrianDao(this as AppDatabase);
+  late final KotakUangDao kotakUangDao = KotakUangDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3227,6 +3699,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     siklusTable,
     produkTable,
     pelangganTable,
+    kotakUangTable,
     transaksiTable,
     detailKonsumsiSiklusTable,
     antrianDigiflazzTable,
@@ -4360,11 +4833,341 @@ typedef $$PelangganTableTableProcessedTableManager =
       Pelanggan,
       PrefetchHooks Function({bool transaksiTableRefs})
     >;
+typedef $$KotakUangTableTableCreateCompanionBuilder =
+    KotakUangTableCompanion Function({
+      Value<int> id,
+      required String nama,
+      Value<int> saldo,
+      Value<int?> iconCode,
+      Value<int?> colorValue,
+      Value<DateTime> createdAt,
+    });
+typedef $$KotakUangTableTableUpdateCompanionBuilder =
+    KotakUangTableCompanion Function({
+      Value<int> id,
+      Value<String> nama,
+      Value<int> saldo,
+      Value<int?> iconCode,
+      Value<int?> colorValue,
+      Value<DateTime> createdAt,
+    });
+
+final class $$KotakUangTableTableReferences
+    extends BaseReferences<_$AppDatabase, $KotakUangTableTable, KotakUang> {
+  $$KotakUangTableTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$TransaksiTableTable, List<Transaksi>>
+  _transaksiTableRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.transaksiTable,
+    aliasName: $_aliasNameGenerator(
+      db.kotakUangTable.id,
+      db.transaksiTable.idKotakUang,
+    ),
+  );
+
+  $$TransaksiTableTableProcessedTableManager get transaksiTableRefs {
+    final manager = $$TransaksiTableTableTableManager(
+      $_db,
+      $_db.transaksiTable,
+    ).filter((f) => f.idKotakUang.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_transaksiTableRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$KotakUangTableTableFilterComposer
+    extends Composer<_$AppDatabase, $KotakUangTableTable> {
+  $$KotakUangTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nama => $composableBuilder(
+    column: $table.nama,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get saldo => $composableBuilder(
+    column: $table.saldo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get iconCode => $composableBuilder(
+    column: $table.iconCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> transaksiTableRefs(
+    Expression<bool> Function($$TransaksiTableTableFilterComposer f) f,
+  ) {
+    final $$TransaksiTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transaksiTable,
+      getReferencedColumn: (t) => t.idKotakUang,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransaksiTableTableFilterComposer(
+            $db: $db,
+            $table: $db.transaksiTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$KotakUangTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $KotakUangTableTable> {
+  $$KotakUangTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nama => $composableBuilder(
+    column: $table.nama,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get saldo => $composableBuilder(
+    column: $table.saldo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get iconCode => $composableBuilder(
+    column: $table.iconCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$KotakUangTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $KotakUangTableTable> {
+  $$KotakUangTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nama =>
+      $composableBuilder(column: $table.nama, builder: (column) => column);
+
+  GeneratedColumn<int> get saldo =>
+      $composableBuilder(column: $table.saldo, builder: (column) => column);
+
+  GeneratedColumn<int> get iconCode =>
+      $composableBuilder(column: $table.iconCode, builder: (column) => column);
+
+  GeneratedColumn<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> transaksiTableRefs<T extends Object>(
+    Expression<T> Function($$TransaksiTableTableAnnotationComposer a) f,
+  ) {
+    final $$TransaksiTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transaksiTable,
+      getReferencedColumn: (t) => t.idKotakUang,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransaksiTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.transaksiTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$KotakUangTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $KotakUangTableTable,
+          KotakUang,
+          $$KotakUangTableTableFilterComposer,
+          $$KotakUangTableTableOrderingComposer,
+          $$KotakUangTableTableAnnotationComposer,
+          $$KotakUangTableTableCreateCompanionBuilder,
+          $$KotakUangTableTableUpdateCompanionBuilder,
+          (KotakUang, $$KotakUangTableTableReferences),
+          KotakUang,
+          PrefetchHooks Function({bool transaksiTableRefs})
+        > {
+  $$KotakUangTableTableTableManager(
+    _$AppDatabase db,
+    $KotakUangTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$KotakUangTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$KotakUangTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$KotakUangTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> nama = const Value.absent(),
+                Value<int> saldo = const Value.absent(),
+                Value<int?> iconCode = const Value.absent(),
+                Value<int?> colorValue = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => KotakUangTableCompanion(
+                id: id,
+                nama: nama,
+                saldo: saldo,
+                iconCode: iconCode,
+                colorValue: colorValue,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String nama,
+                Value<int> saldo = const Value.absent(),
+                Value<int?> iconCode = const Value.absent(),
+                Value<int?> colorValue = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => KotakUangTableCompanion.insert(
+                id: id,
+                nama: nama,
+                saldo: saldo,
+                iconCode: iconCode,
+                colorValue: colorValue,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$KotakUangTableTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({transaksiTableRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (transaksiTableRefs) db.transaksiTable,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (transaksiTableRefs)
+                    await $_getPrefetchedData<
+                      KotakUang,
+                      $KotakUangTableTable,
+                      Transaksi
+                    >(
+                      currentTable: table,
+                      referencedTable: $$KotakUangTableTableReferences
+                          ._transaksiTableRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$KotakUangTableTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).transaksiTableRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.idKotakUang == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$KotakUangTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $KotakUangTableTable,
+      KotakUang,
+      $$KotakUangTableTableFilterComposer,
+      $$KotakUangTableTableOrderingComposer,
+      $$KotakUangTableTableAnnotationComposer,
+      $$KotakUangTableTableCreateCompanionBuilder,
+      $$KotakUangTableTableUpdateCompanionBuilder,
+      (KotakUang, $$KotakUangTableTableReferences),
+      KotakUang,
+      PrefetchHooks Function({bool transaksiTableRefs})
+    >;
 typedef $$TransaksiTableTableCreateCompanionBuilder =
     TransaksiTableCompanion Function({
       Value<int> id,
       Value<int?> idPelanggan,
       Value<int?> idProduk,
+      Value<int?> idKotakUang,
       Value<String> namaProduk,
       required int hargaBeli,
       required int hargaJual,
@@ -4380,6 +5183,7 @@ typedef $$TransaksiTableTableUpdateCompanionBuilder =
       Value<int> id,
       Value<int?> idPelanggan,
       Value<int?> idProduk,
+      Value<int?> idKotakUang,
       Value<String> namaProduk,
       Value<int> hargaBeli,
       Value<int> hargaJual,
@@ -4434,6 +5238,28 @@ final class $$TransaksiTableTableReferences
       $_db.produkTable,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_idProdukTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $KotakUangTableTable _idKotakUangTable(_$AppDatabase db) =>
+      db.kotakUangTable.createAlias(
+        $_aliasNameGenerator(
+          db.transaksiTable.idKotakUang,
+          db.kotakUangTable.id,
+        ),
+      );
+
+  $$KotakUangTableTableProcessedTableManager? get idKotakUang {
+    final $_column = $_itemColumn<int>('id_kotak_uang');
+    if ($_column == null) return null;
+    final manager = $$KotakUangTableTableTableManager(
+      $_db,
+      $_db.kotakUangTable,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_idKotakUangTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -4602,6 +5428,29 @@ class $$TransaksiTableTableFilterComposer
     return composer;
   }
 
+  $$KotakUangTableTableFilterComposer get idKotakUang {
+    final $$KotakUangTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.idKotakUang,
+      referencedTable: $db.kotakUangTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$KotakUangTableTableFilterComposer(
+            $db: $db,
+            $table: $db.kotakUangTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<bool> detailKonsumsiSiklusTableRefs(
     Expression<bool> Function($$DetailKonsumsiSiklusTableTableFilterComposer f)
     f,
@@ -4760,6 +5609,29 @@ class $$TransaksiTableTableOrderingComposer
     );
     return composer;
   }
+
+  $$KotakUangTableTableOrderingComposer get idKotakUang {
+    final $$KotakUangTableTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.idKotakUang,
+      referencedTable: $db.kotakUangTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$KotakUangTableTableOrderingComposer(
+            $db: $db,
+            $table: $db.kotakUangTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TransaksiTableTableAnnotationComposer
@@ -4853,6 +5725,29 @@ class $$TransaksiTableTableAnnotationComposer
     return composer;
   }
 
+  $$KotakUangTableTableAnnotationComposer get idKotakUang {
+    final $$KotakUangTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.idKotakUang,
+      referencedTable: $db.kotakUangTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$KotakUangTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.kotakUangTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> detailKonsumsiSiklusTableRefs<T extends Object>(
     Expression<T> Function($$DetailKonsumsiSiklusTableTableAnnotationComposer a)
     f,
@@ -4923,6 +5818,7 @@ class $$TransaksiTableTableTableManager
           PrefetchHooks Function({
             bool idPelanggan,
             bool idProduk,
+            bool idKotakUang,
             bool detailKonsumsiSiklusTableRefs,
             bool antrianDigiflazzTableRefs,
           })
@@ -4945,6 +5841,7 @@ class $$TransaksiTableTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<int?> idPelanggan = const Value.absent(),
                 Value<int?> idProduk = const Value.absent(),
+                Value<int?> idKotakUang = const Value.absent(),
                 Value<String> namaProduk = const Value.absent(),
                 Value<int> hargaBeli = const Value.absent(),
                 Value<int> hargaJual = const Value.absent(),
@@ -4958,6 +5855,7 @@ class $$TransaksiTableTableTableManager
                 id: id,
                 idPelanggan: idPelanggan,
                 idProduk: idProduk,
+                idKotakUang: idKotakUang,
                 namaProduk: namaProduk,
                 hargaBeli: hargaBeli,
                 hargaJual: hargaJual,
@@ -4973,6 +5871,7 @@ class $$TransaksiTableTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<int?> idPelanggan = const Value.absent(),
                 Value<int?> idProduk = const Value.absent(),
+                Value<int?> idKotakUang = const Value.absent(),
                 Value<String> namaProduk = const Value.absent(),
                 required int hargaBeli,
                 required int hargaJual,
@@ -4986,6 +5885,7 @@ class $$TransaksiTableTableTableManager
                 id: id,
                 idPelanggan: idPelanggan,
                 idProduk: idProduk,
+                idKotakUang: idKotakUang,
                 namaProduk: namaProduk,
                 hargaBeli: hargaBeli,
                 hargaJual: hargaJual,
@@ -5008,6 +5908,7 @@ class $$TransaksiTableTableTableManager
               ({
                 idPelanggan = false,
                 idProduk = false,
+                idKotakUang = false,
                 detailKonsumsiSiklusTableRefs = false,
                 antrianDigiflazzTableRefs = false,
               }) {
@@ -5060,6 +5961,21 @@ class $$TransaksiTableTableTableManager
                                     referencedColumn:
                                         $$TransaksiTableTableReferences
                                             ._idProdukTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (idKotakUang) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.idKotakUang,
+                                    referencedTable:
+                                        $$TransaksiTableTableReferences
+                                            ._idKotakUangTable(db),
+                                    referencedColumn:
+                                        $$TransaksiTableTableReferences
+                                            ._idKotakUangTable(db)
                                             .id,
                                   )
                                   as T;
@@ -5134,6 +6050,7 @@ typedef $$TransaksiTableTableProcessedTableManager =
       PrefetchHooks Function({
         bool idPelanggan,
         bool idProduk,
+        bool idKotakUang,
         bool detailKonsumsiSiklusTableRefs,
         bool antrianDigiflazzTableRefs,
       })
@@ -5963,6 +6880,8 @@ class $AppDatabaseManager {
       $$ProdukTableTableTableManager(_db, _db.produkTable);
   $$PelangganTableTableTableManager get pelangganTable =>
       $$PelangganTableTableTableManager(_db, _db.pelangganTable);
+  $$KotakUangTableTableTableManager get kotakUangTable =>
+      $$KotakUangTableTableTableManager(_db, _db.kotakUangTable);
   $$TransaksiTableTableTableManager get transaksiTable =>
       $$TransaksiTableTableTableManager(_db, _db.transaksiTable);
   $$DetailKonsumsiSiklusTableTableTableManager get detailKonsumsiSiklusTable =>

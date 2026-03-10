@@ -6,6 +6,7 @@ part of 'antrian_dao.dart';
 mixin _$AntrianDaoMixin on DatabaseAccessor<AppDatabase> {
   $PelangganTableTable get pelangganTable => attachedDatabase.pelangganTable;
   $ProdukTableTable get produkTable => attachedDatabase.produkTable;
+  $KotakUangTableTable get kotakUangTable => attachedDatabase.kotakUangTable;
   $TransaksiTableTable get transaksiTable => attachedDatabase.transaksiTable;
   $AntrianDigiflazzTableTable get antrianDigiflazzTable =>
       attachedDatabase.antrianDigiflazzTable;

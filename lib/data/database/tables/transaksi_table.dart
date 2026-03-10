@@ -9,6 +9,7 @@ import 'package:drift/drift.dart';
 
 import 'pelanggan_table.dart';
 import 'produk_table.dart';
+import 'kotak_uang_table.dart';
 
 /// Tabel transaksi — catatan penjualan pulsa/token.
 ///
@@ -29,6 +30,10 @@ class TransaksiTable extends Table {
 
   /// FK ke produk (nullable — referensi bisa hilang)
   IntColumn get idProduk => integer().nullable().references(ProdukTable, #id)();
+
+  /// FK ke kotak uang (nullable - jika transaksi lama atau dihapus)
+  IntColumn get idKotakUang =>
+      integer().nullable().references(KotakUangTable, #id)();
 
   /// Nama produk (disimpan snapshot agar tetap ada walau produk dihapus)
   TextColumn get namaProduk => text().withDefault(const Constant(''))();

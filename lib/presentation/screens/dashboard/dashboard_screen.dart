@@ -14,6 +14,8 @@ import '../../../core/utils/date_formatter.dart';
 import '../../providers/digiflazz_provider.dart';
 import '../../providers/siklus_provider.dart';
 import '../../providers/transaksi_provider.dart';
+import '../../providers/kotak_uang_provider.dart';
+import '../keuangan/kotak_uang_list_screen.dart';
 import '../siklus/tambah_siklus_screen.dart';
 import '../transaksi/transaksi_baru_screen.dart';
 
@@ -41,6 +43,7 @@ class DashboardScreen extends ConsumerWidget {
           ref.invalidate(totalSaldoInternalProvider);
           ref.invalidate(siklusAktifProvider);
           ref.invalidate(transaksiTerakhirProvider);
+          ref.invalidate(kotakUangListProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -55,6 +58,10 @@ class DashboardScreen extends ConsumerWidget {
 
             // ── Siklus Aktif ──────────────────────────────
             _SiklusAktifSection(),
+            const SizedBox(height: 24),
+
+            // ── Kotak Uang (Tunai/Non-Tunai) ──────────────
+            _KotakUangSection(),
             const SizedBox(height: 24),
 
             // ── Transaksi Terakhir ────────────────────────
@@ -431,6 +438,106 @@ class _TransaksiTerakhirSection extends ConsumerWidget {
               child: Text('Error: $e'),
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _KotakUangSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final kotakAsync = ref.watch(kotakUangListProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'KOTAK UANG (KAS)',
+              style: theme.textTheme.labelMedium?.copyWith(
+                letterSpacing: 1.2,
+                color: theme.colorScheme.onSurface.withAlpha(153),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const KotakUangListScreen()),
+              ),
+              child: const Text('Kelola'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        kotakAsync.when(
+          data: (list) {
+            if (list.isEmpty) return const SizedBox.shrink();
+            return SizedBox(
+              height: 100,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: list.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final k = list[index];
+                  return Container(
+                    width: 150,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withAlpha(50),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              IconData(
+                                k.iconCode ?? 57895,
+                                fontFamily: 'MaterialIcons',
+                              ),
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                k.nama,
+                                style: theme.textTheme.labelSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          CurrencyFormatter.format(k.saldo),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+          loading: () => const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, stack) => const SizedBox.shrink(),
         ),
       ],
     );

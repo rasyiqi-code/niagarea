@@ -16,11 +16,12 @@ import 'core_providers.dart';
 import 'digiflazz_provider.dart';
 
 /// Stream provider 10 transaksi terakhir (reactive).
-final transaksiTerakhirProvider =
-    StreamProvider<List<TransaksiDenganPelanggan>>((ref) {
-      final db = ref.watch(databaseProvider);
-      return db.transaksiDao.watchTransaksiTerakhir(limit: 10);
-    });
+final transaksiTerakhirProvider = StreamProvider<List<TransaksiDenganInfo>>((
+  ref,
+) {
+  final db = ref.watch(databaseProvider);
+  return db.transaksiDao.watchTransaksiTerakhir(limit: 10);
+});
 
 /// Future provider total piutang.
 final totalPiutangProvider = FutureProvider<int>((ref) {
@@ -63,6 +64,7 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
     required int hargaBeli,
     required int hargaJual,
     required String statusBayar,
+    required int? idKotakUang,
     String tujuan = '',
     String catatan = '',
     String? kodeDigiflazz,
@@ -87,10 +89,16 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
           profit: profit,
           statusBayar: Value(statusBayar),
           statusKirim: Value(statusKirim),
+          idKotakUang: Value(idKotakUang),
           tujuan: Value(tujuan),
           catatan: Value(catatan),
         ),
       );
+
+      // 1.1. Update saldo Kotak Uang jika lunas
+      if (statusBayar == 'lunas' && idKotakUang != null) {
+        await _db.kotakUangDao.updateSaldo(idKotakUang, hargaJual);
+      }
 
       // 2. Konsumsi saldo FIFO
       try {
@@ -140,10 +148,19 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  /// Batalkan transaksi — rollback FIFO.
+  /// Batalkan transaksi — rollback FIFO & Saldo Kotak Uang.
   Future<void> batalkanTransaksi(int idTransaksi) async {
     state = const AsyncValue.loading();
     try {
+      final trx = await (_db.select(
+        _db.transaksiTable,
+      )..where((t) => t.id.equals(idTransaksi))).getSingle();
+
+      // Rollback saldo Kotak Uang jika lunas
+      if (trx.statusBayar == 'lunas' && trx.idKotakUang != null) {
+        await _db.kotakUangDao.updateSaldo(trx.idKotakUang!, -trx.hargaJual);
+      }
+
       await _fifoEngine.rollbackKonsumsi(idTransaksi);
       await _db.transaksiDao.hapusTransaksi(idTransaksi);
       state = const AsyncValue.data(null);

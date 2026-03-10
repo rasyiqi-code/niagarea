@@ -6,5 +6,6 @@ part of 'transaksi_dao.dart';
 mixin _$TransaksiDaoMixin on DatabaseAccessor<AppDatabase> {
   $PelangganTableTable get pelangganTable => attachedDatabase.pelangganTable;
   $ProdukTableTable get produkTable => attachedDatabase.produkTable;
+  $KotakUangTableTable get kotakUangTable => attachedDatabase.kotakUangTable;
   $TransaksiTableTable get transaksiTable => attachedDatabase.transaksiTable;
 }

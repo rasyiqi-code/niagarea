@@ -14,6 +14,7 @@ import '../../../data/database/app_database.dart';
 import '../../../domain/fifo/fifo_engine.dart';
 import '../../providers/pelanggan_produk_provider.dart';
 import '../../providers/transaksi_provider.dart';
+import '../../providers/kotak_uang_provider.dart';
 
 /// form transaksi baru — jual produk ke pelanggan.
 class TransaksiBaruScreen extends ConsumerStatefulWidget {
@@ -30,6 +31,7 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
   String _statusBayar = StatusBayar.lunas;
   final _tujuanController = TextEditingController();
   final _catatanController = TextEditingController();
+  KotakUang? _selectedKotakUang;
 
   /// Profit = harga_jual - harga_beli
   int get _profit =>
@@ -62,6 +64,7 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
           hargaBeli: produk.hargaBeli,
           hargaJual: produk.hargaJual,
           statusBayar: _statusBayar,
+          idKotakUang: _selectedKotakUang?.id,
           tujuan: _tujuanController.text.trim(),
           catatan: _catatanController.text.trim(),
         );
@@ -245,6 +248,43 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
             onSelectionChanged: (v) => setState(() => _statusBayar = v.first),
           ),
           const SizedBox(height: 16),
+
+          // ── Pilih Kotak Uang ────────────────────────
+          if (_statusBayar == 'lunas') ...[
+            Text('Masuk Ke Kotak Uang', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            ref
+                .watch(kotakUangListProvider)
+                .when(
+                  data: (list) {
+                    // Set default ke Laci Tunai jika belum pilih
+                    if (_selectedKotakUang == null && list.isNotEmpty) {
+                      _selectedKotakUang = list.firstWhere(
+                        (k) => k.nama == 'Laci Tunai',
+                        orElse: () => list.first,
+                      );
+                    }
+                    return DropdownButtonFormField<KotakUang>(
+                      initialValue: _selectedKotakUang,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                        hintText: 'Pilih wadah uang...',
+                      ),
+                      items: list
+                          .map(
+                            (k) =>
+                                DropdownMenuItem(value: k, child: Text(k.nama)),
+                          )
+                          .toList(),
+                      onChanged: (k) => setState(() => _selectedKotakUang = k),
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (error, stack) =>
+                      const Text('Gagal memuat kotak uang'),
+                ),
+            const SizedBox(height: 16),
+          ],
 
           // ── Catatan ─────────────────────────────────
           TextFormField(

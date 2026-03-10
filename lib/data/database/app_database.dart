@@ -4,12 +4,8 @@
 /// satu instance database SQLite.
 library;
 
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:drift_flutter/drift_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
 import 'tables/antrian_digiflazz_table.dart';
@@ -18,6 +14,7 @@ import 'tables/pelanggan_table.dart';
 import 'tables/produk_table.dart';
 import 'tables/siklus_table.dart';
 import 'tables/transaksi_table.dart';
+import 'tables/kotak_uang_table.dart';
 
 // DAOs
 import '../daos/siklus_dao.dart';
@@ -26,6 +23,7 @@ import '../daos/pelanggan_dao.dart';
 import '../daos/transaksi_dao.dart';
 import '../daos/detail_konsumsi_dao.dart';
 import '../daos/antrian_dao.dart';
+import '../daos/kotak_uang_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -41,6 +39,7 @@ part 'app_database.g.dart';
     TransaksiTable,
     DetailKonsumsiSiklusTable,
     AntrianDigiflazzTable,
+    KotakUangTable,
   ],
   daos: [
     SiklusDao,
@@ -49,10 +48,11 @@ part 'app_database.g.dart';
     TransaksiDao,
     DetailKonsumsiDao,
     AntrianDao,
+    KotakUangDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : super(driftDatabase(name: AppConstants.databaseName));
 
   /// Constructor untuk testing — terima executor dari luar
   AppDatabase.forTesting(super.e);
@@ -74,19 +74,18 @@ class AppDatabase extends _$AppDatabase {
             catatan: const Value('Pelanggan umum tanpa nama'),
           ),
         );
+
+        // Seed: tambahkan kotak uang default "Laci Tunai"
+        await into(kotakUangTable).insert(
+          KotakUangTableCompanion.insert(
+            nama: 'Laci Tunai',
+            saldo: const Value(0),
+          ),
+        );
       },
       onUpgrade: (Migrator m, int from, int to) async {
         // TODO: Tambahkan migrasi saat schema berubah
       },
     );
   }
-}
-
-/// Membuka koneksi ke database SQLite lokal.
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, AppConstants.databaseName));
-    return NativeDatabase.createInBackground(file);
-  });
 }

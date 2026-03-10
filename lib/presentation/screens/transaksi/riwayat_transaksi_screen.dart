@@ -89,6 +89,7 @@ class RiwayatTransaksiScreen extends ConsumerWidget {
                   ),
                   subtitle: Text(
                     '$nama · ${DateFormatter.relatif(trx.createdAt)}'
+                    '${trx.idKotakUang != null ? " · ${item.kotakUang?.nama ?? ""}" : ""}'
                     '${trx.tujuan.isNotEmpty ? " · ${trx.tujuan}" : ""}',
                     style: theme.textTheme.bodySmall,
                   ),

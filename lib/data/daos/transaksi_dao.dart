@@ -9,19 +9,25 @@ import 'package:drift/drift.dart';
 import '../database/app_database.dart';
 import '../database/tables/pelanggan_table.dart';
 import '../database/tables/transaksi_table.dart';
+import '../database/tables/kotak_uang_table.dart';
 
 part 'transaksi_dao.g.dart';
 
 /// Data class untuk transaksi dengan info pelanggan (JOIN).
-class TransaksiDenganPelanggan {
+class TransaksiDenganInfo {
   final Transaksi transaksi;
   final Pelanggan? pelanggan;
+  final KotakUang? kotakUang;
 
-  TransaksiDenganPelanggan({required this.transaksi, this.pelanggan});
+  TransaksiDenganInfo({
+    required this.transaksi,
+    this.pelanggan,
+    this.kotakUang,
+  });
 }
 
 /// DAO transaksi — CRUD dan query riwayat.
-@DriftAccessor(tables: [TransaksiTable, PelangganTable])
+@DriftAccessor(tables: [TransaksiTable, PelangganTable, KotakUangTable])
 class TransaksiDao extends DatabaseAccessor<AppDatabase>
     with _$TransaksiDaoMixin {
   TransaksiDao(super.db);
@@ -35,8 +41,8 @@ class TransaksiDao extends DatabaseAccessor<AppDatabase>
 
   // ── READ ────────────────────────────────────────────────
 
-  /// Ambil N transaksi terakhir dengan info pelanggan.
-  Future<List<TransaksiDenganPelanggan>> ambilTransaksiTerakhir({
+  /// Ambil N transaksi terakhir dengan info pelanggan dan kotak uang.
+  Future<List<TransaksiDenganInfo>> ambilTransaksiTerakhir({
     int limit = 10,
   }) async {
     final query =
@@ -45,28 +51,35 @@ class TransaksiDao extends DatabaseAccessor<AppDatabase>
               pelangganTable,
               pelangganTable.id.equalsExp(transaksiTable.idPelanggan),
             ),
+            leftOuterJoin(
+              kotakUangTable,
+              kotakUangTable.id.equalsExp(transaksiTable.idKotakUang),
+            ),
           ])
           ..orderBy([OrderingTerm.desc(transaksiTable.createdAt)])
           ..limit(limit);
 
     final rows = await query.get();
     return rows.map((row) {
-      return TransaksiDenganPelanggan(
+      return TransaksiDenganInfo(
         transaksi: row.readTable(transaksiTable),
         pelanggan: row.readTableOrNull(pelangganTable),
+        kotakUang: row.readTableOrNull(kotakUangTable),
       );
     }).toList();
   }
 
   /// Stream transaksi terakhir (reactive).
-  Stream<List<TransaksiDenganPelanggan>> watchTransaksiTerakhir({
-    int limit = 10,
-  }) {
+  Stream<List<TransaksiDenganInfo>> watchTransaksiTerakhir({int limit = 10}) {
     final query =
         select(transaksiTable).join([
             leftOuterJoin(
               pelangganTable,
               pelangganTable.id.equalsExp(transaksiTable.idPelanggan),
+            ),
+            leftOuterJoin(
+              kotakUangTable,
+              kotakUangTable.id.equalsExp(transaksiTable.idKotakUang),
             ),
           ])
           ..orderBy([OrderingTerm.desc(transaksiTable.createdAt)])
@@ -74,16 +87,17 @@ class TransaksiDao extends DatabaseAccessor<AppDatabase>
 
     return query.watch().map((rows) {
       return rows.map((row) {
-        return TransaksiDenganPelanggan(
+        return TransaksiDenganInfo(
           transaksi: row.readTable(transaksiTable),
           pelanggan: row.readTableOrNull(pelangganTable),
+          kotakUang: row.readTableOrNull(kotakUangTable),
         );
       }).toList();
     });
   }
 
   /// Ambil transaksi berdasarkan rentang tanggal.
-  Future<List<TransaksiDenganPelanggan>> ambilTransaksiByTanggal(
+  Future<List<TransaksiDenganInfo>> ambilTransaksiByTanggal(
     DateTime dari,
     DateTime sampai,
   ) async {
@@ -93,15 +107,20 @@ class TransaksiDao extends DatabaseAccessor<AppDatabase>
               pelangganTable,
               pelangganTable.id.equalsExp(transaksiTable.idPelanggan),
             ),
+            leftOuterJoin(
+              kotakUangTable,
+              kotakUangTable.id.equalsExp(transaksiTable.idKotakUang),
+            ),
           ])
           ..where(transaksiTable.createdAt.isBetweenValues(dari, sampai))
           ..orderBy([OrderingTerm.desc(transaksiTable.createdAt)]);
 
     final rows = await query.get();
     return rows.map((row) {
-      return TransaksiDenganPelanggan(
+      return TransaksiDenganInfo(
         transaksi: row.readTable(transaksiTable),
         pelanggan: row.readTableOrNull(pelangganTable),
+        kotakUang: row.readTableOrNull(kotakUangTable),
       );
     }).toList();
   }
