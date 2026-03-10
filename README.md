@@ -1,14 +1,14 @@
 # ⚡ NiagaRea
 
-**NiagaRea** adalah aplikasi **Buku Ledger (Pencatatan) Pulsa Digital** berbasis mobile yang dirancang khusus untuk pemilik konter. Aplikasi ini memungkinkan pengguna mencatat transaksi penjualan pulsa/token secara mandiri dengan akurasi tinggi (FIFO), sambil menyediakan akses mudah ke stok produk dari NiagaRea sebagai solusi pengadaan barang.
+**NiagaRea** adalah aplikasi mobile **Buku Ledger (Pencatatan) Pulsa Digital** yang dirancang khusus untuk pemilik konter. Aplikasi ini memungkinkan pengguna mencatat transaksi penjualan pulsa/token dari **manapun provider-nya** (Provider-Agnostic) dengan akurasi tinggi (FIFO), sambil menyediakan akses opsional ke stok produk dari NiagaRea sebagai solusi pengadaan barang yang terintegrasi.
 
-## 📖 Konsep NiagaRea: Catat & Jual
+## 📖 Konsep NiagaRea: Catat Dari Mana Saja
 
-Aplikasi ini beroperasi dengan filosofi "Pencatatan Dulu, Transaksi Kemudian":
-1.  **Asisten Pencatatan Mandiri**: Fokus utama adalah sebagai buku catatan digital bagi pemilik konter untuk melacak modal, harga jual, dan profit secara akurat.
-2.  **Penyedia Produk (Monetisasi)**: NiagaRea bertindak sebagai supplier produk digital (via Digiflazz). User dapat membeli stok dari NiagaRea untuk dijual kembali melalui aplikasi ini.
-3.  **Transparansi Modal & Markup**: Harga beli yang ditampilkan kepada Reseller sudah mencakup markup keuntungan NiagaRea, memudahkan Reseller mengetahui "Modal Bersih" mereka.
-4.  **Akurasi Keuntungan (FIFO)**: Keuntungan dihitung otomatis berdasarkan stok deposit yang digunakan, memastikan pembukuan konter selalu beres.
+Aplikasi ini beroperasi dengan filosofi "Buku Catatan Mandiri":
+1.  **Asisten Pencatatan Universal**: Fokus utama adalah sebagai buku catatan digital untuk melacak modal, harga jual, dan profit dari transaksi provider manapun (fisik, aplikasi lain, atau chip).
+2.  **Penyedia Produk Opsional**: NiagaRea menyediakan integrasi stok produk digital (via Digiflazz). User bebas memilih untuk membeli stok dari NiagaRea guna otomatisasi pencatatan atau tetap menggunakan provider luar.
+3.  **Transparansi Modal & Markup**: Jika menggunakan stok NiagaRea, harga beli sudah mencakup markup keuntungan NiagaRea. Jika menggunakan provider lain, user tetap bisa menginput modal secara manual per siklus deposit.
+4.  **Akurasi Keuntungan (FIFO)**: Keuntungan tetap dihitung otomatis berdasarkan stok deposit yang digunakan, siapapun provider-nya.
 
 ## ✅ Fitur yang Sudah Diimplementasikan
 
