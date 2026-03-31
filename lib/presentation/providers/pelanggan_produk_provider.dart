@@ -84,10 +84,10 @@ final produkAktifProvider = StreamProvider<List<Produk>>((ref) {
   return db.produkDao.watchProdukAktif();
 });
 
-/// Future provider semua produk (termasuk non-aktif).
-final semuaProdukProvider = FutureProvider<List<Produk>>((ref) {
+/// Stream provider semua produk (termasuk non-aktif).
+final semuaProdukProvider = StreamProvider<List<Produk>>((ref) {
   final db = ref.watch(databaseProvider);
-  return db.produkDao.ambilSemuaProduk();
+  return db.produkDao.watchSemuaProduk();
 });
 
 /// Notifier untuk operasi CRUD produk.

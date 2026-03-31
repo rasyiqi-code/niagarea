@@ -149,6 +149,82 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  /// Buat transaksi pascabayar (Inquiry -> Payment).
+  Future<int?> buatTransaksiPascabayar({
+    required int? idPelanggan,
+    required int? idProduk,
+    required String namaProduk,
+    required int hargaBeli,
+    required int hargaJual,
+    required String statusBayar,
+    required int? idKotakUang,
+    required String refId,
+    String tujuan = '',
+    String catatan = '',
+    String? kodeDigiflazz,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final profit = hargaJual - hargaBeli;
+
+      // 1. Insert transaksi
+      final idTransaksi = await _db.transaksiDao.tambahTransaksi(
+        TransaksiTableCompanion.insert(
+          idPelanggan: Value(idPelanggan),
+          idProduk: Value(idProduk),
+          namaProduk: Value(namaProduk),
+          hargaBeli: hargaBeli,
+          hargaJual: hargaJual,
+          profit: profit,
+          statusBayar: Value(statusBayar),
+          statusKirim: const Value('pending'),
+          idKotakUang: Value(idKotakUang),
+          tujuan: Value(tujuan),
+          catatan: Value(catatan),
+        ),
+      );
+
+      // 1.1. Update saldo Kotak Uang jika lunas
+      if (statusBayar == 'lunas' && idKotakUang != null) {
+        await _db.kotakUangDao.updateSaldo(idKotakUang, hargaJual);
+      }
+
+      // 1.2. Update saldo Piutang jika utang
+      if (statusBayar == 'utang' && idPelanggan != null) {
+        await _db.pelangganDao.updateSaldoPiutang(idPelanggan, hargaJual);
+      }
+
+      // 2. Konsumsi saldo FIFO
+      try {
+        await _fifoEngine.konsumsiSaldo(
+          jumlah: hargaBeli,
+          idTransaksi: idTransaksi,
+        );
+      } catch (e) {
+        await _db.transaksiDao.hapusTransaksi(idTransaksi);
+        rethrow;
+      }
+
+      // 3. Eksekusi Bayar Tagihan ke Digiflazz
+      if (kodeDigiflazz != null && _queueService != null) {
+        try {
+          // Kita gunakan antrian agar tetap terlacak jika koneksi putus saat bayar
+          await _queueService.tambahDanKirim(
+            idTransaksi: idTransaksi,
+            kodeProduk: kodeDigiflazz,
+            tujuan: tujuan,
+          );
+        } catch (_) {}
+      }
+
+      state = const AsyncValue.data(null);
+      return idTransaksi;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
+
   /// Update status bayar transaksi.
   Future<void> updateStatusBayar(int idTransaksi, String status) async {
     state = const AsyncValue.loading();

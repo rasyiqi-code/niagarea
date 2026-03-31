@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "159543011697",
+    "project_id": "niagarea-dc396",
+    "storage_bucket": "niagarea-dc396.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:159543011697:android:bb4b5c09c5dcdbf4676ed0",
+        "android_client_info": {
+          "package_name": "com.niagarea.niagarea"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "159543011697-a4866sojd6ohoi0vnovd9h042vl8p6t6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZI_xJVGqhC64b9-c-QL1WNnjSvx6DEj0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "159543011697-a4866sojd6ohoi0vnovd9h042vl8p6t6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

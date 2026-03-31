@@ -28,7 +28,8 @@ class ProdukDao extends DatabaseAccessor<AppDatabase> with _$ProdukDaoMixin {
   /// Insert jika kode_digiflazz belum ada, update jika sudah ada.
   Future<void> upsertProdukBatch(List<ProdukTableCompanion> entries) async {
     await batch((b) {
-      b.insertAllOnConflictUpdate(produkTable, entries);
+      // Menggunakan insertOrReplace agar otomatis menghandle UNIQUE constraint pada kode_digiflazz
+      b.insertAll(produkTable, entries, mode: InsertMode.insertOrReplace);
     });
   }
 
@@ -63,6 +64,15 @@ class ProdukDao extends DatabaseAccessor<AppDatabase> with _$ProdukDaoMixin {
           (t) => OrderingTerm.asc(t.nama),
         ]))
         .get();
+  }
+
+  /// Stream semua produk (termasuk non-aktif) secara reaktif.
+  Stream<List<Produk>> watchSemuaProduk() {
+    return (select(produkTable)..orderBy([
+          (t) => OrderingTerm.asc(t.kategori),
+          (t) => OrderingTerm.asc(t.nama),
+        ]))
+        .watch();
   }
 
   /// Ambil produk berdasarkan kategori.

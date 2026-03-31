@@ -152,6 +152,12 @@ class TransaksiDao extends DatabaseAccessor<AppDatabase>
     }).toList();
   }
 
+  /// Ambil data transaksi tunggal berdasarkan ID.
+  Future<Transaksi> cariTransaksiById(int idTransaksi) {
+    return (select(transaksiTable)..where((t) => t.id.equals(idTransaksi)))
+        .getSingle();
+  }
+
   /// Hitung total profit dalam rentang tanggal.
   Future<int> hitungTotalProfit(DateTime dari, DateTime sampai) async {
     final result =

@@ -88,6 +88,21 @@ class DigiflazzConstants {
   /// Endpoint daftar harga
   static const String priceListEndpoint = '/price-list';
 
-  /// Endpoint transaksi
+  /// Endpoint transaksi (Prabayar)
   static const String transactionEndpoint = '/transaction';
+
+  /// Endpoint cek tagihan (Pascabayar Inquiry)
+  static const String cekTagihanEndpoint = '/cek-tagihan';
+
+  /// Endpoint bayar tagihan (Pascabayar Payment)
+  static const String bayarTagihanEndpoint = '/bayar-tagihan';
+
+  /// Endpoint cek status transaksi
+  static const String cekStatusEndpoint = '/cek-status';
+
+  /// Endpoint inquiry PLN (Token/Pasca)
+  static const String inquiryPlnEndpoint = '/inquiry-pln';
+
+  /// Endpoint request tiket deposit
+  static const String depositEndpoint = '/deposit';
 }

@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
-import 'presentation/navigation/app_shell.dart';
+import 'presentation/navigation/auth_wrapper.dart';
 
 /// Widget utama aplikasi NiagaRea.
 ///
@@ -29,8 +29,8 @@ class NiagaReaApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
 
-      // Halaman utama dengan bottom navigation
-      home: const AppShell(),
+      // Halaman utama dengan pengecekan auth
+      home: const AuthWrapper(),
     );
   }
 }

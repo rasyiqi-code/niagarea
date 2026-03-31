@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:niagarea/data/daos/antrian_dao.dart';
+import 'package:niagarea/data/daos/transaksi_dao.dart';
 import 'package:niagarea/data/database/app_database.dart';
 import 'package:niagarea/domain/fifo/fifo_engine.dart';
 import 'package:niagarea/services/digiflazz/digiflazz_client.dart';
@@ -13,23 +14,31 @@ class MockAntrianDao extends Mock implements AntrianDao {}
 
 class MockFifoEngine extends Mock implements FifoEngine {}
 
+class MockTransaksiDao extends Mock implements TransaksiDao {}
+
 void main() {
   late TransactionQueueService queueService;
   late MockDigiflazzClient mockClient;
   late MockAntrianDao mockDao;
   late MockFifoEngine mockFifo;
+  late MockTransaksiDao mockTransaksiDao;
 
   setUp(() {
     mockClient = MockDigiflazzClient();
     mockDao = MockAntrianDao();
     mockFifo = MockFifoEngine();
+    mockTransaksiDao = MockTransaksiDao();
     queueService = TransactionQueueService(
       client: mockClient,
       antrianDao: mockDao,
+      transaksiDao: mockTransaksiDao,
       fifoEngine: mockFifo,
     );
 
     registerFallbackValue(const AntrianDigiflazzTableCompanion());
+    when(() => mockTransaksiDao.updateStatusKirim(any(), any())).thenAnswer(
+      (_) async => true,
+    );
   });
 
   group('TransactionQueueService - tambahDanKirim', () {

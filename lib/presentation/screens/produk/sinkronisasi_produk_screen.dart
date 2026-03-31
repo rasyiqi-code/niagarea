@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/database/app_database.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/core_providers.dart';
 import '../../providers/digiflazz_provider.dart';
 import '../../providers/pelanggan_produk_provider.dart';
@@ -32,6 +33,9 @@ class _SinkronisasiProdukScreenState
   /// Search query
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  
+  /// Flag untuk mencegah auto-sync dipicu berulang kali dalam satu sesi
+  bool _hasCheckedFirestore = false;
 
   @override
   void dispose() {
@@ -43,27 +47,56 @@ class _SinkronisasiProdukScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dgState = ref.watch(digiflazzNotifierProvider);
+    final isOffline = ref.watch(isOfflineProvider);
+
+    // ── Auto-Hydration ──────────────────────────────────────
+    // Jika data kosong dan belum pernah cek, coba tarik dari Firestore otomatis
+    ref.listen(semuaProdukProvider, (previous, next) {
+      if (_hasCheckedFirestore || isOffline) return; // Jangan auto-pull jika offline
+      
+      next.whenData((list) {
+        if (list.isEmpty && !dgState.isLoading) {
+          _hasCheckedFirestore = true;
+          // Gunakan microtask agar tidak mengganggu build cycle
+          Future.microtask(() {
+            ref.read(digiflazzNotifierProvider.notifier).pullFromFirestore();
+          });
+        } else if (list.isNotEmpty) {
+          _hasCheckedFirestore = true;
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Katalog Provider'),
+        title: const Text('Manajemen Katalog (Admin)'),
         actions: [
-          // Tombol sinkronisasi
+          // Tombol sinkronisasi (Disabled jika offline)
           TextButton.icon(
-            onPressed: dgState.isLoading ? null : _doSync,
+            onPressed: (dgState.isLoading || isOffline) ? null : _doSync,
             icon: dgState.isLoading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.sync, size: 18),
-            label: const Text('Sync'),
+                : Icon(
+                    Icons.sync, 
+                    size: 18, 
+                    color: isOffline ? theme.disabledColor : null,
+                  ),
+            label: Text(
+              'Sync',
+              style: TextStyle(color: isOffline ? theme.disabledColor : null),
+            ),
           ),
         ],
       ),
       body: Column(
         children: [
+          // Banner Offline
+          if (isOffline) const _OfflineBanner(),
+          
           // ── Search & Filter Bar ──────────────────────
           _SearchFilterBar(
             searchCtrl: _searchCtrl,
@@ -79,12 +112,60 @@ class _SinkronisasiProdukScreenState
     );
   }
 
-  /// Jalankan sinkronisasi produk.
+  /// Jalankan sinkronisasi produk secara bertahap dengan dialog progress.
   Future<void> _doSync() async {
+    // Tampilkan loading dialog dengan progress
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Consumer(
+        builder: (context, ref, _) {
+          final state = ref.watch(digiflazzNotifierProvider);
+          final progress = state.progress;
+
+          return AlertDialog(
+            title: const Text('Sinkronisasi Katalog'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (progress == null)
+                  const Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Expanded(child: Text('Menyiapkan data...')),
+                    ],
+                  )
+                else ...[
+                  LinearProgressIndicator(value: progress.percentage),
+                  const SizedBox(height: 12),
+                  Text(
+                    progress.status,
+                    style: const TextStyle(fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${(progress.percentage * 100).toInt()}%',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
     final notifier = ref.read(digiflazzNotifierProvider.notifier);
     final ok = await notifier.sinkronisasiProduk();
 
     if (!mounted) return;
+    Navigator.pop(context); // Tutup loading dialog
 
     final state = ref.read(digiflazzNotifierProvider);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -96,13 +177,13 @@ class _SinkronisasiProdukScreenState
       ),
     );
 
-    // Refresh list produk
-    ref.invalidate(semuaProdukProvider);
+    // List produk akan otomatis refresh karena kita pakai StreamProvider sekarang
   }
 
   /// Build list produk yang sudah tersimpan di lokal.
   Widget _buildProdukList(ThemeData theme) {
     final produkAsync = ref.watch(semuaProdukProvider);
+    final dgState = ref.watch(digiflazzNotifierProvider);
 
     return produkAsync.when(
       data: (list) {
@@ -124,21 +205,27 @@ class _SinkronisasiProdukScreenState
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 64,
-                  color: theme.colorScheme.onSurface.withAlpha(77),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  list.isEmpty
-                      ? 'Belum ada produk.\nTekan "Sync" untuk mengambil dari provider.'
-                      : 'Tidak ada produk sesuai filter.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withAlpha(128),
+                if (dgState.isLoading) ...[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  const Text('Memulihkan katalog dari Cloud...'),
+                ] else ...[
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 64,
+                    color: theme.colorScheme.onSurface.withAlpha(77),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    list.isEmpty
+                        ? 'Katalog kosong.\nHubungkan ke Digiflazz di Pengaturan\nuntuk mulai jualan.'
+                        : 'Tidak ada produk sesuai filter.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withAlpha(128),
+                    ),
+                  ),
+                ],
               ],
             ),
           );
@@ -150,14 +237,51 @@ class _SinkronisasiProdukScreenState
           grouped.putIfAbsent(p.kategori, () => []).add(p);
         }
 
+        // ── Optimasi: Flattening List untuk Lazy Loading ────────────
+        final flattenedItems = <dynamic>[];
+        final sortedCategories = grouped.keys.toList()..sort();
+        
+        for (final kategori in sortedCategories) {
+          flattenedItems.add(kategori); // Tambah Header Kategori (String)
+          flattenedItems.addAll(grouped[kategori]!); // Tambah Produk (Produk)
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.only(bottom: 80),
-          itemCount: grouped.length,
+          itemCount: flattenedItems.length,
           itemBuilder: (context, index) {
-            final kategori = grouped.keys.elementAt(index);
-            final produkList = grouped[kategori]!;
+            final item = flattenedItems[index];
 
-            return _KategoriSection(kategori: kategori, produkList: produkList);
+            if (item is String) {
+              // Jika item adalah string, ini adalah Header Kategori
+              final kategori = item;
+              final count = grouped[kategori]?.length ?? 0;
+              final aktifCount = grouped[kategori]?.where((p) => p.aktif).length ?? 0;
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Row(
+                  children: [
+                    Text(
+                      '▼ $kategori',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '$aktifCount aktif dari $count',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(128),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              // Jika item adalah Produk, render item produk biasa
+              return _ProdukItem(produk: item as Produk);
+            }
           },
         );
       },
@@ -246,46 +370,7 @@ class _SearchFilterBar extends StatelessWidget {
   }
 }
 
-/// Section per kategori produk.
-class _KategoriSection extends ConsumerWidget {
-  final String kategori;
-  final List<Produk> produkList;
-
-  const _KategoriSection({required this.kategori, required this.produkList});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final aktifCount = produkList.where((p) => p.aktif).length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Row(
-            children: [
-              Text(
-                '▼ $kategori',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '$aktifCount aktif dari ${produkList.length}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withAlpha(128),
-                ),
-              ),
-            ],
-          ),
-        ),
-        ...produkList.map((p) => _ProdukItem(produk: p)),
-      ],
-    );
-  }
-}
+// _KategoriSection dihapus agar hemat memori (sudah diganti oleh logika flattened di atas)
 
 /// Item produk individual dengan toggle aktif & edit harga jual.
 class _ProdukItem extends ConsumerWidget {
@@ -401,6 +486,32 @@ class _ProdukItem extends ConsumerWidget {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Widget Banner Peringatan Offline (Admin Mode)
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.orange.shade800,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: const Row(
+        children: [
+          Icon(Icons.cloud_off, color: Colors.white, size: 20),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Koneksi offline. Sinkronisasi Digiflazz dinonaktifkan. Silakan nyalakan paket data.',
+              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),

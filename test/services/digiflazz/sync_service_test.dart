@@ -56,8 +56,11 @@ void main() {
       ];
 
       when(
-        () => mockClient.ambilDaftarHarga(cmd: any(named: 'cmd')),
+        () => mockClient.ambilDaftarHarga(cmd: 'prepaid'),
       ).thenAnswer((_) async => DaftarHargaResponse(data: mockData));
+      when(
+        () => mockClient.ambilDaftarHarga(cmd: 'pasca'),
+      ).thenAnswer((_) async => const DaftarHargaResponse(data: []));
 
       when(() => mockDao.upsertProdukBatch(any())).thenAnswer((_) async => {});
 
@@ -78,31 +81,6 @@ void main() {
       expect(companions.first.nama.value, 'XL 10k');
       // Verifikasi normalisasi kategori
       expect(companions.first.kategori.value, 'Pulsa');
-    });
-
-    test('simpanSemuaStatus: true akan menyimpan semua produk', () async {
-      final mockData = [
-        const ProdukDigiflazz(
-          productName: 'P1',
-          category: 'C1',
-          brand: 'B1',
-          buyerSkuCode: 'k1',
-          price: 1000,
-          buyerProductStatus: false,
-        ),
-      ];
-
-      when(
-        () => mockClient.ambilDaftarHarga(cmd: any(named: 'cmd')),
-      ).thenAnswer((_) async => DaftarHargaResponse(data: mockData));
-      when(() => mockDao.upsertProdukBatch(any())).thenAnswer((_) async => {});
-
-      final result = await syncService.sinkronisasiProduk(
-        simpanSemuaStatus: true,
-      );
-
-      expect(result.totalDisimpan, 1);
-      expect(result.totalDiSkip, 0);
     });
 
     test('menangani response kosong dari API', () async {

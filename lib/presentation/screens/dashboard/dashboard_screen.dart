@@ -15,10 +15,12 @@ import '../../providers/digiflazz_provider.dart';
 import '../../providers/siklus_provider.dart';
 import '../../providers/transaksi_provider.dart';
 import '../../providers/kotak_uang_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../keuangan/kotak_uang_list_screen.dart';
 import '../pengaturan/pengaturan_screen.dart';
 import '../siklus/tambah_siklus_screen.dart';
 import '../transaksi/transaksi_baru_screen.dart';
+import './topup_request_dialog.dart';
 
 /// Layar dashboard — halaman utama aplikasi.
 class DashboardScreen extends ConsumerWidget {
@@ -54,6 +56,8 @@ class DashboardScreen extends ConsumerWidget {
           ref.invalidate(siklusAktifProvider);
           ref.invalidate(transaksiTerakhirProvider);
           ref.invalidate(kotakUangListProvider);
+          ref.invalidate(cloudBalanceProvider);
+          ref.invalidate(userProfileProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -93,7 +97,7 @@ class _SaldoCard extends ConsumerWidget {
     final saldoAsync = ref.watch(totalSaldoInternalProvider);
     final profitAsync = ref.watch(profitHariIniProvider);
     final saldoDgAsync = ref.watch(saldoDigiflazzProvider);
-    final isAdmin = ref.watch(isAdminModeProvider);
+    final isAdmin = ref.watch(isAdminProvider);
 
     return Container(
       width: double.infinity,
@@ -160,8 +164,80 @@ class _SaldoCard extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          
+          // ── Saldo Cloud (Deposit ke Provider) ──────────
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onPrimary.withAlpha(30),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet,
+                  color: theme.colorScheme.onPrimary,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SALDO CLOUD (DEPOSIT)',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onPrimary.withAlpha(178),
+                          fontSize: 10,
+                        ),
+                      ),
+                      ref.watch(cloudBalanceProvider).when(
+                        data: (balance) => Text(
+                          CurrencyFormatter.format(balance.toInt()),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        loading: () => Text(
+                          '...',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        ),
+                        error: (_, _) => Text(
+                          'Error',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final user = ref.read(userProfileProvider).value;
+                    if (user != null) {
+                      showDialog(
+                        context: context,
+                        builder: (context) => TopupRequestDialog(userName: user.name),
+                      );
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    backgroundColor: theme.colorScheme.onPrimary.withAlpha(40),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('Isi Saldo', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
 
-          // ── Saldo Provider (Hanya Admin) ──────────
+          // ── Saldo Provider (Hanya Admin Pusat) ────────
           if (isAdmin) ...[
             const SizedBox(height: 12),
             Container(
@@ -202,7 +278,6 @@ class _SaldoCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  // Tombol refresh saldo
                   InkWell(
                     onTap: () => ref.invalidate(saldoDigiflazzProvider),
                     child: Icon(

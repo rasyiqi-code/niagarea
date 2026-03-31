@@ -8,8 +8,10 @@ library;
 import 'package:uuid/uuid.dart';
 
 import '../../data/daos/antrian_dao.dart';
+import '../../data/daos/transaksi_dao.dart';
 import '../../data/database/app_database.dart';
 import '../../domain/fifo/fifo_engine.dart';
+import '../firebase/cloud_balance_service.dart';
 import 'digiflazz_client.dart';
 
 /// Hasil pemrosesan antrian transaksi.
@@ -46,7 +48,10 @@ class QueueProcessResult {
 class TransactionQueueService {
   final DigiflazzClient _client;
   final AntrianDao _antrianDao;
+  final TransaksiDao _transaksiDao;
   final FifoEngine _fifoEngine;
+  final CloudBalanceService? _balanceService;
+  final String? _uid;
 
   /// Generator UUID untuk reference ID unik
   static const _uuid = Uuid();
@@ -54,10 +59,16 @@ class TransactionQueueService {
   TransactionQueueService({
     required DigiflazzClient client,
     required AntrianDao antrianDao,
+    required TransaksiDao transaksiDao,
     required FifoEngine fifoEngine,
+    CloudBalanceService? balanceService,
+    String? uid,
   }) : _client = client,
        _antrianDao = antrianDao,
-       _fifoEngine = fifoEngine;
+       _transaksiDao = transaksiDao,
+       _fifoEngine = fifoEngine,
+       _balanceService = balanceService,
+       _uid = uid;
 
   /// Tambahkan transaksi ke antrian dan coba kirim langsung.
   ///
@@ -172,7 +183,32 @@ class TransactionQueueService {
     required String refId,
     required int idTransaksi,
   }) async {
+    // 1. Ambil data transaksi untuk tahu nominal saldo cloud (harga_beli)
+    final tx = await _transaksiDao.cariTransaksiById(idTransaksi);
+    final amountToDebit = tx.hargaBeli.toDouble();
+
+    bool isCloudDebited = false;
+
     try {
+      // 2. Debet Saldo Cloud jika user login (Bukan Admin Pusat)
+      if (_balanceService != null && _uid != null) {
+        try {
+          await _balanceService.debitBalance(
+            uid: _uid,
+            amount: amountToDebit,
+            transactionReference: refId,
+          );
+          isCloudDebited = true;
+        } catch (e) {
+          // Gagal debet (misal saldo tidak cukup)
+          await _antrianDao.updateStatusKirim(idAntrian, 'gagal', e.toString());
+          await _transaksiDao.updateStatusKirim(idTransaksi, 'gagal');
+          await _fifoEngine.rollbackKonsumsi(idTransaksi);
+          return;
+        }
+      }
+
+      // 3. Kirim ke API Digiflazz
       final response = await _client.kirimTransaksi(
         buyerSkuCode: kodeProduk,
         customerNo: tujuan,
@@ -186,6 +222,7 @@ class TransactionQueueService {
           'sukses',
           response.toString(),
         );
+        await _transaksiDao.updateStatusKirim(idTransaksi, 'sukses');
       } else if (response.isPending) {
         // Masih diproses — biarkan pending
         await _antrianDao.updateStatusKirim(
@@ -194,13 +231,22 @@ class TransactionQueueService {
           response.toString(),
         );
       } else {
-        // Gagal — rollback FIFO saldo
+        // Gagal — rollback FIFO saldo & Refund Saldo Cloud
         await _antrianDao.updateStatusKirim(
           idAntrian,
           'gagal',
           response.toString(),
         );
+        await _transaksiDao.updateStatusKirim(idTransaksi, 'gagal');
         await _fifoEngine.rollbackKonsumsi(idTransaksi);
+
+        // Refund Saldo Cloud jika tadi sudah didebet
+        if (isCloudDebited && _balanceService != null && _uid != null) {
+          await _balanceService.creditBalance(
+            uid: _uid,
+            amount: amountToDebit,
+          );
+        }
       }
     } on DigiflazzException catch (e) {
       // Error koneksi/server — tandai gagal tapi JANGAN rollback FIFO
@@ -214,7 +260,43 @@ class TransactionQueueService {
 
       // Error lain (server error, credential salah) → gagal
       await _antrianDao.updateStatusKirim(idAntrian, 'gagal', e.toString());
+      await _transaksiDao.updateStatusKirim(idTransaksi, 'gagal');
       rethrow;
+    }
+  }
+
+  /// Rekonsiliasi status untuk transaksi yang masih pending.
+  /// Memanggil API cek-status untuk sinkronisasi hasil akhir.
+  Future<void> rekonsiliasiStatus() async {
+    final pendingList = await _antrianDao.ambilPending();
+    for (final item in pendingList) {
+      try {
+        final response = await _client.cekStatus(
+          buyerSkuCode: item.kodeProduk,
+          customerNo: item.tujuan,
+          refId: item.refId,
+        );
+
+        if (response.isSukses) {
+          await _antrianDao.updateStatusKirim(
+            item.id,
+            'sukses',
+            response.toString(),
+          );
+          await _transaksiDao.updateStatusKirim(item.idTransaksi, 'sukses');
+        } else if (response.isGagal) {
+          await _antrianDao.updateStatusKirim(
+            item.id,
+            'gagal',
+            response.toString(),
+          );
+          await _transaksiDao.updateStatusKirim(item.idTransaksi, 'gagal');
+          await _fifoEngine.rollbackKonsumsi(item.idTransaksi);
+        }
+        // Jika tetap pending, biarkan saja
+      } catch (_) {
+        // Abaikan error saat rekonsiliasi (mungkin masalah jaringan)
+      }
     }
   }
 }

@@ -118,7 +118,16 @@ class DaftarHargaResponse {
 
   /// Parse dari JSON response API.
   factory DaftarHargaResponse.fromJson(Map<String, dynamic> json) {
-    final dataList = json['data'] as List<dynamic>? ?? [];
+    final rawData = json['data'];
+    
+    // Jika data bukan List (biasanya Map berisi error), kembalikan List kosong
+    // agar sinkronisasi bisa menangani sebagai kondisi 'data tidak ditemukan'
+    if (rawData is! List) {
+      final message = (rawData is Map) ? rawData['message'] : 'Gagal memuat produk.';
+      throw Exception(message ?? 'Data produk tidak valid dari API.');
+    }
+
+    final dataList = rawData;
     return DaftarHargaResponse(
       data: dataList
           .map((item) => ProdukDigiflazz.fromJson(item as Map<String, dynamic>))
@@ -192,4 +201,112 @@ class TransaksiDigiflazzResponse {
 
   @override
   String toString() => 'TransaksiResponse($refId, $status, $message)';
+}
+
+/// Response dari endpoint cek tagihan (Pascabayar Inquiry).
+class TagihanResponse {
+  final String refId;
+  final String customerNo;
+  final String customerName;
+  final String buyerSkuCode;
+  final int admin;
+  final String message;
+  final String status;
+  final String rc;
+  final int price;
+  final int sellingPrice;
+  final Map<String, dynamic> desc;
+
+  const TagihanResponse({
+    required this.refId,
+    required this.customerNo,
+    required this.customerName,
+    required this.buyerSkuCode,
+    required this.admin,
+    required this.message,
+    required this.status,
+    required this.rc,
+    required this.price,
+    required this.sellingPrice,
+    this.desc = const {},
+  });
+
+  factory TagihanResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? json;
+    return TagihanResponse(
+      refId: data['ref_id'] as String? ?? '',
+      customerNo: data['customer_no'] as String? ?? '',
+      customerName: data['customer_name'] as String? ?? '',
+      buyerSkuCode: data['buyer_sku_code'] as String? ?? '',
+      admin: (data['admin'] as num?)?.toInt() ?? 0,
+      message: data['message'] as String? ?? '',
+      status: data['status'] as String? ?? '',
+      rc: data['rc'] as String? ?? '',
+      price: (data['price'] as num?)?.toInt() ?? 0,
+      sellingPrice: (data['selling_price'] as num?)?.toInt() ?? 0,
+      desc: data['desc'] as Map<String, dynamic>? ?? {},
+    );
+  }
+
+  bool get isSukses => rc == '00';
+}
+
+/// Response dari endpoint inquiry PLN.
+class InquiryPlnResponse {
+  final String customerNo;
+  final String customerName;
+  final String rc;
+  final String message;
+
+  const InquiryPlnResponse({
+    required this.customerNo,
+    required this.customerName,
+    required this.rc,
+    required this.message,
+  });
+
+  factory InquiryPlnResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? json;
+    return InquiryPlnResponse(
+      customerNo: data['customer_no'] as String? ?? '',
+      customerName: data['customer_name'] as String? ?? '',
+      rc: data['rc'] as String? ?? '',
+      message: data['message'] as String? ?? '',
+    );
+  }
+
+  bool get isSukses => rc == '00';
+}
+
+/// Response dari endpoint request tiket deposit.
+class DepositResponse {
+  final int amount;
+  final String bank;
+  final String noRekening;
+  final String atasNama;
+  final String rc;
+  final String message;
+
+  const DepositResponse({
+    required this.amount,
+    required this.bank,
+    required this.noRekening,
+    required this.atasNama,
+    required this.rc,
+    required this.message,
+  });
+
+  factory DepositResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? json;
+    return DepositResponse(
+      amount: (data['amount'] as num?)?.toInt() ?? 0,
+      bank: data['bank'] as String? ?? '',
+      noRekening: data['no_rekening'] as String? ?? '',
+      atasNama: data['atas_nama'] as String? ?? '',
+      rc: data['rc'] as String? ?? '',
+      message: data['message'] as String? ?? '',
+    );
+  }
+
+  bool get isSukses => rc == '00';
 }

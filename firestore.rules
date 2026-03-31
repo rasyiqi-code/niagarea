@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper: Cek apakah user sudah login
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Helper: Cek apakah user adalah admin berdasarkan field 'role' di dokumen user
+    function isAdmin() {
+      return signedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Koleksi Users
+    match /users/{userId} {
+      // User bisa baca/tulis datanya sendiri, Admin bisa akses semuanya
+      allow read, write: if (signedIn() && request.auth.uid == userId) || isAdmin();
+    }
+
+    // Riwayat Top-up
+    match /topup_history/{docId} {
+      // Hanya Admin yang bisa baca/tulis riwayat top-up
+      allow read, write: if isAdmin();
+    }
+
+    // Konfigurasi Sistem (API Credential, dsb)
+    match /settings/{docId} {
+      // Hanya Admin yang bisa melihat dan mengubah pengaturan sistem
+      allow read, write: if isAdmin();
+    }
+
+    // Katalog Produk (Harga & SKU)
+    match /products/{sku} {
+      // Semua user yang sudah login bisa melihat daftar harga/produk
+      allow read: if signedIn();
+      // Hanya Admin yang bisa melakukan sinkronisasi/update produk dari Digiflazz
+      allow write: if isAdmin();
+    }
+    
+    // Transaksi Global (Opsional jika nanti ada log transaksi cloud)
+    match /transactions/{docId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+  }
+}

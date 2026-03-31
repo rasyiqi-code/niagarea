@@ -10,8 +10,11 @@ import '../../data/database/app_database.dart';
 import '../../services/auth/admin_guard.dart';
 import '../../services/digiflazz/digiflazz_client.dart';
 import '../../services/digiflazz/digiflazz_config.dart';
+import '../../services/digiflazz/digiflazz_models.dart';
 import '../../services/digiflazz/sync_service.dart';
 import '../../services/digiflazz/transaction_queue_service.dart';
+import 'auth_provider.dart';
+import 'connectivity_provider.dart';
 import 'core_providers.dart';
 
 // ── Singleton Providers ─────────────────────────────────
@@ -45,10 +48,17 @@ final transactionQueueProvider = Provider<TransactionQueueService>((ref) {
   final client = ref.watch(digiflazzClientProvider);
   final db = ref.watch(databaseProvider);
   final fifo = ref.watch(fifoEngineProvider);
+  final balanceService = ref.watch(balanceServiceProvider);
+  final authState = ref.watch(authStateProvider);
+  final uid = authState.value?.uid;
+
   return TransactionQueueService(
     client: client,
     antrianDao: db.antrianDao,
+    transaksiDao: db.transaksiDao,
     fifoEngine: fifo,
+    balanceService: balanceService,
+    uid: uid,
   );
 });
 
@@ -104,13 +114,28 @@ class DigiflazzState {
   /// Pesan sukses terakhir (null jika tidak ada)
   final String? sukses;
 
-  const DigiflazzState({this.isLoading = false, this.error, this.sukses});
+  /// Informasi progress sinkronisasi (null jika tidak sedang berjalan)
+  final SyncProgress? progress;
 
-  DigiflazzState copyWith({bool? isLoading, String? error, String? sukses}) {
+  const DigiflazzState({
+    this.isLoading = false,
+    this.error,
+    this.sukses,
+    this.progress,
+  });
+
+  DigiflazzState copyWith({
+    bool? isLoading,
+    String? error,
+    String? sukses,
+    SyncProgress? progress,
+    bool clearProgress = false,
+  }) {
     return DigiflazzState(
       isLoading: isLoading ?? this.isLoading,
       error: error,
       sukses: sukses,
+      progress: clearProgress ? null : (progress ?? this.progress),
     );
   }
 }
@@ -176,20 +201,40 @@ class DigiflazzNotifier extends StateNotifier<DigiflazzState> {
     }
   }
 
-  /// Sinkronisasi produk dari Digiflazz.
+  /// Sinkronisasi produk dari Digiflazz secara bertahap.
   Future<bool> sinkronisasiProduk() async {
-    state = state.copyWith(isLoading: true, error: null, sukses: null);
+    if (_ref.read(isOfflineProvider)) {
+      state = state.copyWith(error: 'Offline: Silakan nyalakan paket data untuk sinkronisasi.');
+      return false;
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      sukses: null,
+      clearProgress: true,
+    );
     try {
       final syncService = _ref.read(syncServiceProvider);
-      final result = await syncService.sinkronisasiProduk();
+      final result = await syncService.sinkronisasiProduk(
+        onProgress: (p) => state = state.copyWith(progress: p),
+      );
 
       // Invalidate provider produk agar UI refresh
       _ref.invalidate(saldoDigiflazzProvider);
 
-      state = state.copyWith(isLoading: false, sukses: result.pesan);
+      state = state.copyWith(
+        isLoading: false,
+        sukses: result.pesan,
+        clearProgress: true,
+      );
       return true;
     } on DigiflazzException catch (e) {
-      state = state.copyWith(isLoading: false, error: e.message);
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message,
+        clearProgress: true,
+      );
       return false;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -197,8 +242,38 @@ class DigiflazzNotifier extends StateNotifier<DigiflazzState> {
     }
   }
 
+  /// Tarik data produk dari Cloud Firestore (Restore/Hydration).
+  Future<void> pullFromFirestore() async {
+    if (_ref.read(isOfflineProvider)) {
+      // Diam saja jika auto-pull saat offline untuk menghindari gangguan UI
+      return;
+    }
+
+    state = state.copyWith(isLoading: true, error: null, sukses: null);
+
+    try {
+      final service = _ref.read(syncServiceProvider);
+      final count = await service.pullFromFirestore(
+        onProgress: (p) => state = state.copyWith(progress: p),
+      );
+
+      if (count > 0) {
+        state = state.copyWith(isLoading: false, sukses: 'Katalog berhasil dimuat ($count produk).', clearProgress: true);
+      } else {
+        state = state.copyWith(isLoading: false, sukses: 'Tidak ada data di Cloud.', clearProgress: true);
+      }
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString(), progress: null);
+    }
+  }
+
   /// Proses semua antrian pending.
   Future<void> prosesAntrian() async {
+    if (_ref.read(isOfflineProvider)) {
+      state = state.copyWith(error: 'Offline: Nyalakan paket data untuk memproses antrian.');
+      return;
+    }
+
     state = state.copyWith(isLoading: true, error: null, sukses: null);
     try {
       final queueService = _ref.read(transactionQueueProvider);
@@ -239,6 +314,35 @@ class DigiflazzNotifier extends StateNotifier<DigiflazzState> {
     }
   }
 
+  /// Request tiket deposit.
+  Future<DepositResponse?> requestDeposit({
+    required int amount,
+    required String bank,
+    required String ownerName,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null, sukses: null);
+    try {
+      final client = _ref.read(digiflazzClientProvider);
+      final response = await client.requestDeposit(
+        amount: amount,
+        bank: bank,
+        ownerName: ownerName,
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        sukses: 'Tiket deposit berhasil dibuat.',
+      );
+      return response;
+    } on DigiflazzException catch (e) {
+      state = state.copyWith(isLoading: false, error: e.message);
+      return null;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return null;
+    }
+  }
+
   /// Hapus credential API.
   Future<void> hapusCredential() async {
     final config = _ref.read(digiflazzConfigProvider);
@@ -263,3 +367,21 @@ final digiflazzNotifierProvider =
 /// Provider untuk melacak apakah sedang dalam mode Admin.
 /// Default: false (Mode User biasa).
 final isAdminModeProvider = StateProvider<bool>((ref) => false);
+
+/// Provider untuk otomatisasi rekonsiliasi status.
+/// Berjalan setiap 30 detik jika ada transaksi pending.
+final autoReconciliationProvider = Provider.autoDispose((ref) {
+  final queueService = ref.watch(transactionQueueProvider);
+  final jumlahPending = ref.watch(jumlahPendingProvider).value ?? 0;
+
+  if (jumlahPending == 0) return;
+
+  final timer = Stream.periodic(const Duration(seconds: 30)).listen((_) async {
+    await queueService.rekonsiliasiStatus();
+    // Invalidate provider untuk refresh UI
+    ref.invalidate(jumlahPendingProvider);
+    ref.invalidate(antrianProvider);
+  });
+
+  ref.onDispose(() => timer.cancel());
+});

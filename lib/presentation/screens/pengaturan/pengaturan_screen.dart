@@ -12,7 +12,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../../services/digiflazz/digiflazz_models.dart';
 import '../../providers/digiflazz_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../admin/admin_dashboard_screen.dart';
+import '../produk/sinkronisasi_produk_screen.dart';
 
 /// Halaman pengaturan dengan integrasi Digiflazz & Proteksi Admin.
 class PengaturanScreen extends ConsumerWidget {
@@ -59,6 +64,21 @@ class PengaturanScreen extends ConsumerWidget {
               title: const Text('Sinkronisasi Produk'),
               subtitle: const Text('Ambil daftar produk terbaru'),
               onTap: () => _sinkronisasiProduk(context, ref),
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet_outlined),
+              title: const Text('Tambah Saldo Digiflazz'),
+              subtitle: const Text('Request tiket deposit (Bank Transfer)'),
+              onTap: () => _showDepositDialog(context, ref),
+            ),
+            ListTile(
+              leading: const Icon(Icons.people_outline),
+              title: const Text('Kelola Reseller'),
+              subtitle: const Text('Lihat daftar user & top-up saldo'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.add_business_outlined),
@@ -266,44 +286,33 @@ class PengaturanScreen extends ConsumerWidget {
     );
   }
 
-  /// Sinkronisasi produk dari Digiflazz.
-  void _sinkronisasiProduk(BuildContext context, WidgetRef ref) async {
-    // Tampilkan loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Expanded(child: Text('Mengambil produk terbaru...')),
-          ],
-        ),
-      ),
-    );
-
-    final notifier = ref.read(digiflazzNotifierProvider.notifier);
-    final ok = await notifier.sinkronisasiProduk();
-
-    if (!context.mounted) return;
-    Navigator.pop(context); // Tutup loading dialog
-
-    final state = ref.read(digiflazzNotifierProvider);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ok ? (state.sukses ?? 'Sukses') : (state.error ?? 'Gagal'),
-        ),
-        backgroundColor: ok ? AppColors.success : AppColors.error,
-      ),
+  /// Navigasi ke halaman sinkronisasi produk (Admin).
+  void _sinkronisasiProduk(BuildContext context, WidgetRef ref) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SinkronisasiProdukScreen()),
     );
   }
 
   /// Toggle mode admin menggunakan pintu rahasia (Long Press).
   Future<void> _toggleAdminMode(BuildContext context, WidgetRef ref) async {
-    final isAdmin = ref.read(isAdminModeProvider);
-    if (isAdmin) return; // Sudah admin
+    // 1. Cek apakah user adalah Admin resmi di Database (Firestore)
+    final isFirestoreAdmin = ref.read(isAdminProvider);
+    
+    if (!isFirestoreAdmin) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Akses Ditolak: Anda tidak memiliki hak akses Admin.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final isAdminMode = ref.read(isAdminModeProvider);
+    if (isAdminMode) return; // Sudah dalam mode admin
 
     final guard = ref.read(adminGuardProvider);
     final ok = await guard.verifikasiAdmin(context);
@@ -431,6 +440,167 @@ class PengaturanScreen extends ConsumerWidget {
               }
             },
             child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Dialog request tiket deposit.
+  void _showDepositDialog(BuildContext context, WidgetRef ref) {
+    final amountCtrl = TextEditingController();
+    final ownerNameCtrl = TextEditingController(text: 'NIAGAREA OWNER');
+    String selectedBank = 'BCA';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Tambah Saldo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nominal Deposit',
+                  prefixText: 'Rp ',
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedBank,
+                decoration: const InputDecoration(labelText: 'Pilih Bank'),
+                items: ['BCA', 'BNI', 'BRI', 'MANDIRI']
+                    .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                    .toList(),
+                onChanged: (v) => setState(() => selectedBank = v!),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ownerNameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Pengirim (Sesuai Rekening)',
+                  hintText: 'Misal: BUDI SANTOSO',
+                ),
+                textCapitalization: TextCapitalization.characters,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final amount = int.tryParse(amountCtrl.text) ?? 0;
+                if (amount < 10000) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Minimal deposit Rp 10.000')),
+                  );
+                  return;
+                }
+                if (ownerNameCtrl.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Nama pengirim wajib diisi.')),
+                  );
+                  return;
+                }
+
+                final notifier = ref.read(digiflazzNotifierProvider.notifier);
+                final res = await notifier.requestDeposit(
+                  amount: amount,
+                  bank: selectedBank,
+                  ownerName: ownerNameCtrl.text.trim().toUpperCase(),
+                );
+
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (res != null && context.mounted) {
+                  _showDepositInstruction(context, res);
+                }
+              },
+              child: const Text('Buat Tiket'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDepositInstruction(BuildContext context, DepositResponse res) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Instruksi Pembayaran'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Silakan transfer TEPAT sesuai nominal berikut agar saldo masuk otomatis:',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  CurrencyFormatter.format(res.amount),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            _InfoRow(label: 'Bank', value: res.bank),
+            _InfoRow(label: 'No. Rekening', value: res.noRekening),
+            _InfoRow(label: 'Atas Nama', value: res.atasNama),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Text(
+              '* Saldo akan masuk otomatis 5-10 menit setelah transfer berhasil.',
+              style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Selesai'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 13)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
         ],
       ),

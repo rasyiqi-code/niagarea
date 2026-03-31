@@ -9,6 +9,7 @@
 /// dan signature MD5 sebagai autentikasi.
 library;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dio/dio.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -29,7 +30,7 @@ class DigiflazzClient {
 
   /// Buat Dio instance default dengan konfigurasi optimal.
   static Dio _createDefaultDio() {
-    return Dio(
+    final dio = Dio(
       BaseOptions(
         baseUrl: DigiflazzConstants.baseUrl,
         connectTimeout: const Duration(seconds: 15),
@@ -37,6 +38,29 @@ class DigiflazzClient {
         headers: {'Content-Type': 'application/json'},
       ),
     );
+
+    // Jika berjalan di Web, tambahkan Interceptor untuk membelokkan request ke Cloudflare Worker
+    if (kIsWeb) {
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            // 1. Dapatkan URL asli lengkap
+            final originalUrl = options.uri.toString();
+            
+            // 2. Bersihkan baseUrl agar tidak terjadi penggabungan URL yang salah
+            options.baseUrl = '';
+            
+            // 3. Belokkan ke Worker dengan URL asli yang sudah di-encode
+            final proxyUrl = 'https://square-lake-6889.crediblemarkofficial.workers.dev/?url=${Uri.encodeComponent(originalUrl)}';
+            options.path = proxyUrl;
+            
+            return handler.next(options);
+          },
+        ),
+      );
+    }
+
+    return dio;
   }
 
   // ── 1. CEK SALDO ─────────────────────────────────────
@@ -150,6 +174,180 @@ class DigiflazzClient {
       return TransaksiDigiflazzResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  // ── 4. PASCABAYAR (CEK & BAYAR) ───────────────────────
+
+  /// Cek tagihan pascabayar (Inquiry).
+  ///
+  /// Mengembalikan [TagihanResponse].
+  Future<TagihanResponse> cekTagihan({
+    required String buyerSkuCode,
+    required String customerNo,
+    required String refId,
+  }) async {
+    final username = await _config.getUsername();
+    final apiKey = await _config.getApiKey();
+    _validateCredential(username, apiKey);
+
+    final sign = DigiflazzConfig.generateSignature(
+      username: username!,
+      apiKey: apiKey!,
+      suffix: refId,
+    );
+
+    try {
+      final response = await _dio.post(
+        DigiflazzConstants.cekTagihanEndpoint,
+        data: {
+          'commands': 'inq-pasca',
+          'username': username,
+          'buyer_sku_code': buyerSkuCode,
+          'customer_no': customerNo,
+          'ref_id': refId,
+          'sign': sign,
+        },
+      );
+      return TagihanResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Bayar tagihan pascabayar (Payment).
+  ///
+  /// Mengembalikan [TransaksiDigiflazzResponse].
+  Future<TransaksiDigiflazzResponse> bayarTagihan({
+    required String buyerSkuCode,
+    required String customerNo,
+    required String refId,
+  }) async {
+    final username = await _config.getUsername();
+    final apiKey = await _config.getApiKey();
+    _validateCredential(username, apiKey);
+
+    final sign = DigiflazzConfig.generateSignature(
+      username: username!,
+      apiKey: apiKey!,
+      suffix: refId,
+    );
+
+    try {
+      final response = await _dio.post(
+        DigiflazzConstants.bayarTagihanEndpoint,
+        data: {
+          'commands': 'pay-pasca',
+          'username': username,
+          'buyer_sku_code': buyerSkuCode,
+          'customer_no': customerNo,
+          'ref_id': refId,
+          'sign': sign,
+        },
+      );
+      return TransaksiDigiflazzResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  // ── 5. UTILITAS & STATUS ──────────────────────────────
+
+  /// Cek status transaksi (Prabayar/Pascabayar).
+  Future<TransaksiDigiflazzResponse> cekStatus({
+    required String buyerSkuCode,
+    required String customerNo,
+    required String refId,
+  }) async {
+    final username = await _config.getUsername();
+    final apiKey = await _config.getApiKey();
+    _validateCredential(username, apiKey);
+
+    final sign = DigiflazzConfig.generateSignature(
+      username: username!,
+      apiKey: apiKey!,
+      suffix: refId,
+    );
+
+    try {
+      final response = await _dio.post(
+        DigiflazzConstants.cekStatusEndpoint,
+        data: {
+          'username': username,
+          'buyer_sku_code': buyerSkuCode,
+          'customer_no': customerNo,
+          'ref_id': refId,
+          'sign': sign,
+        },
+      );
+      return TransaksiDigiflazzResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Inquiry nama pelanggan PLN (Token/Pasca).
+  Future<InquiryPlnResponse> inquiryPln(String customerNo) async {
+    final username = await _config.getUsername();
+    final apiKey = await _config.getApiKey();
+    _validateCredential(username, apiKey);
+
+    final sign = DigiflazzConfig.generateSignature(
+      username: username!,
+      apiKey: apiKey!,
+      suffix: 'pln',
+    );
+
+    try {
+      final response = await _dio.post(
+        DigiflazzConstants.inquiryPlnEndpoint,
+        data: {
+          'commands': 'pln-subscribe',
+          'customer_no': customerNo,
+          'username': username,
+          'sign': sign,
+        },
+      );
+      return InquiryPlnResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Request tiket deposit.
+  Future<DepositResponse> requestDeposit({
+    required int amount,
+    required String bank,
+    required String ownerName,
+  }) async {
+    final username = await _config.getUsername();
+    final apiKey = await _config.getApiKey();
+    _validateCredential(username, apiKey);
+
+    final sign = DigiflazzConfig.generateSignature(
+      username: username!,
+      apiKey: apiKey!,
+      suffix: 'deposit',
+    );
+
+    try {
+      final response = await _dio.post(
+        DigiflazzConstants.depositEndpoint,
+        data: {
+          'username': username,
+          'amount': amount,
+          'Bank': bank,
+          'owner_name': ownerName,
+          'sign': sign,
+        },
+      );
+      return DepositResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

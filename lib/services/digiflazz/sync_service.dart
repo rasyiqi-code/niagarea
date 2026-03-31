@@ -1,9 +1,4 @@
-/// Service sinkronisasi produk dari API Digiflazz ke database lokal.
-///
-/// Mengambil daftar harga dari Digiflazz dan menyimpannya
-/// ke tabel `produk` lokal via bulk upsert.
-library;
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/drift.dart';
 
 import '../../data/daos/produk_dao.dart';
@@ -14,16 +9,9 @@ import 'digiflazz_models.dart';
 
 /// Hasil sinkronisasi produk.
 class SyncResult {
-  /// Total produk yang diterima dari API
   final int totalDariApi;
-
-  /// Total produk yang berhasil di-upsert ke database
   final int totalDisimpan;
-
-  /// Total produk yang di-skip (status non-aktif di Digiflazz)
   final int totalDiSkip;
-
-  /// Pesan ringkasan
   final String pesan;
 
   const SyncResult({
@@ -34,120 +22,244 @@ class SyncResult {
   });
 }
 
-/// Service untuk sinkronisasi produk Digiflazz ke database lokal.
-///
-/// Alur kerja:
-/// 1. Panggil API daftar harga Digiflazz
-/// 2. Filter produk yang aktif di Digiflazz
-/// 3. Map ke format database lokal
-/// 4. Bulk upsert ke tabel produk
+/// Progress sinkronisasi untuk UI.
+class SyncProgress {
+  final int total;
+  final int current;
+  final String status;
+
+  const SyncProgress({
+    required this.total,
+    required this.current,
+    required this.status,
+  });
+
+  double get percentage => total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
+}
+
+/// Service untuk sinkronisasi produk Digiflazz ke database lokal & Cloud.
 class SyncService {
   final DigiflazzClient _client;
   final ProdukDao _produkDao;
   final DigiflazzConfig _config;
+  final FirebaseFirestore _db;
 
   SyncService({
     required DigiflazzClient client,
     required ProdukDao produkDao,
     required DigiflazzConfig config,
+    FirebaseFirestore? db,
   }) : _client = client,
        _produkDao = produkDao,
-       _config = config;
+       _config = config,
+       _db = db ?? FirebaseFirestore.instance;
 
-  /// Sinkronisasi daftar produk dari Digiflazz ke database lokal.
-  ///
-  /// [cmd] — "prepaid" untuk prabayar (default), "pasca" untuk pascabayar.
-  /// [simpanSemuaStatus] — jika true, simpan juga produk non-aktif.
-  ///
-  /// Mengembalikan [SyncResult] berisi statistik proses.
-  /// Throws [DigiflazzException] jika API gagal.
+  /// Sinkronisasi daftar produk dari Digiflazz ke database lokal & Cloud secara bertahap.
   Future<SyncResult> sinkronisasiProduk({
-    String cmd = 'prepaid',
-    bool simpanSemuaStatus = false,
+    bool includePasca = true,
+    void Function(SyncProgress)? onProgress,
   }) async {
-    // 0. Ambil markup global
-    final markupGlobal = await _config.getMarkupGlobal();
+    int totalApi = 0;
+    int totalSimpan = 0;
+    int totalSkip = 0;
 
-    // 1. Ambil daftar harga dari API (prepaid/pasca)
-    final response = await _client.ambilDaftarHarga(cmd: cmd);
-    final semuaProduk = response.data;
+    final resPrepaid = await _prosesSync('prepaid', onProgress);
+    totalApi += resPrepaid.totalDariApi;
+    totalSimpan += resPrepaid.totalDisimpan;
+    totalSkip += resPrepaid.totalDiSkip;
 
-    if (semuaProduk.isEmpty) {
-      return const SyncResult(
-        totalDariApi: 0,
-        totalDisimpan: 0,
-        totalDiSkip: 0,
-        pesan: 'Tidak ada produk dari provider.',
-      );
+    if (includePasca) {
+      final resPasca = await _prosesSync('pasca', onProgress);
+      totalApi += resPasca.totalDariApi;
+      totalSimpan += resPasca.totalDisimpan;
+      totalSkip += resPasca.totalDiSkip;
     }
 
-    // 2. Filter produk yang aktif (kecuali simpanSemuaStatus = true)
-    final produkFiltered = simpanSemuaStatus
-        ? semuaProduk
-        : semuaProduk.where((p) => p.buyerProductStatus).toList();
-
-    final totalDiSkip = semuaProduk.length - produkFiltered.length;
-
-    // 3. Map ke format database (ProdukTableCompanion)
-    final companions = produkFiltered
-        .map((p) => _mapToProdukCompanion(p, markupGlobal))
-        .toList();
-
-    // 4. Bulk upsert ke database lokal
-    await _produkDao.upsertProdukBatch(companions);
-
     return SyncResult(
-      totalDariApi: semuaProduk.length,
-      totalDisimpan: produkFiltered.length,
-      totalDiSkip: totalDiSkip,
-      pesan:
-          'Berhasil sinkronisasi ${produkFiltered.length} produk '
-          'dari ${semuaProduk.length} total.',
+      totalDariApi: totalApi,
+      totalDisimpan: totalSimpan,
+      totalDiSkip: totalSkip,
+      pesan: 'Berhasil sinkronisasi $totalSimpan produk.',
     );
   }
 
-  /// Map [ProdukDigiflazz] ke [ProdukTableCompanion] untuk database.
-  ///
-  /// Mapping field:
-  /// - price + markup → harga_beli (modal user)
-  /// - buyer_product_status → aktif (default false, user pilih manual)
-  ProdukTableCompanion _mapToProdukCompanion(
+  /// Helper untuk memproses sinkronisasi per kategory.
+  Future<_SyncStats> _prosesSync(
+    String cmd,
+    void Function(SyncProgress)? onProgress,
+  ) async {
+    final markupGlobal = await _config.getMarkupGlobal();
+    
+    onProgress?.call(const SyncProgress(
+      total: 0,
+      current: 0,
+      status: 'Menghubungi API...',
+    ));
+    
+    final response = await _client.ambilDaftarHarga(cmd: cmd);
+    final semuaProdukFromApi = response.data;
+
+    if (semuaProdukFromApi.isEmpty) return const _SyncStats(0, 0, 0);
+
+    final existingProdukList = await _produkDao.ambilSemuaProduk();
+    final existingMap = {for (final p in existingProdukList) p.kodeDigiflazz: p};
+
+    final produkUntukUpdate = <ProdukDigiflazz>[];
+    int countIdentik = 0;
+
+    for (final pApi in semuaProdukFromApi) {
+      if (!pApi.buyerProductStatus) continue;
+      final pExisting = existingMap[pApi.buyerSkuCode];
+      
+      bool perluUpdate = false;
+      if (pExisting == null) {
+        perluUpdate = true;
+      } else {
+        if (pExisting.hargaBeli != pApi.price ||
+            pExisting.nama != pApi.productName ||
+            pExisting.kategori != _normalizeKategori(pApi.category)) {
+          perluUpdate = true;
+        } else {
+          countIdentik++;
+        }
+      }
+      if (perluUpdate) produkUntukUpdate.add(pApi);
+    }
+
+    if (produkUntukUpdate.isEmpty) {
+      return _SyncStats(semuaProdukFromApi.length, 0, semuaProdukFromApi.length - countIdentik + countIdentik);
+    }
+
+    final companions = produkUntukUpdate.map((pApi) {
+      final pExisting = existingMap[pApi.buyerSkuCode];
+      return _mapToProdukCompanion(pApi, markupGlobal, existing: pExisting);
+    }).toList();
+
+    await _produkDao.upsertProdukBatch(companions);
+    await _syncToFirestore(produkUntukUpdate, existingMap, markupGlobal, cmd == 'prepaid', onProgress);
+
+    return _SyncStats(semuaProdukFromApi.length, produkUntukUpdate.length, 0);
+  }
+
+  /// Tarik semua produk dari Firestore ke database lokal (Restore).
+  Future<int> pullFromFirestore({
+    void Function(SyncProgress)? onProgress,
+  }) async {
+    onProgress?.call(const SyncProgress(total: 0, current: 0, status: 'Menghubungi Cloud Firestore...'));
+
+    final snapshot = await _db.collection('products').get();
+    final docs = snapshot.docs;
+
+    if (docs.isEmpty) return 0;
+
+    onProgress?.call(SyncProgress(total: docs.length, current: 0, status: 'Memulihkan data...'));
+
+    final companions = docs.map((doc) => _mapFromFirestore(doc.data())).toList();
+    await _produkDao.upsertProdukBatch(companions);
+
+    return docs.length;
+  }
+
+  /// Sinkronisasi produk ke Cloud Firestore.
+  Future<void> _syncToFirestore(
+    List<ProdukDigiflazz> produkList,
+    Map<String, Produk> existingMap,
+    int markup,
+    bool isPrepaid,
+    void Function(SyncProgress)? onProgress,
+  ) async {
+    const int batchSize = 100;
+    for (var i = 0; i < produkList.length; i += batchSize) {
+      final batch = _db.batch();
+      final end = (i + batchSize < produkList.length) ? i + batchSize : produkList.length;
+      final subList = produkList.sublist(i, end);
+      
+      for (final produk in subList) {
+        final docRef = _db.collection('products').doc(produk.buyerSkuCode);
+        final pExisting = existingMap[produk.buyerSkuCode];
+        batch.set(docRef, _mapToFirestore(produk, markup, isPrepaid, existing: pExisting), SetOptions(merge: true));
+      }
+      await batch.commit();
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+  }
+
+  Map<String, dynamic> _mapToFirestore(
     ProdukDigiflazz produk,
     int markup,
-  ) {
+    bool isPrepaid, {
+    Produk? existing,
+  }) {
+    int finalPrice = (existing != null && existing.hargaJual > 0) ? existing.hargaJual : (produk.price + markup);
+    String finalStatus = 'non-aktif';
+    if (existing != null) {
+      finalStatus = existing.aktif ? 'aktif' : 'non-aktif';
+    }
+
+    return {
+      'sku': produk.buyerSkuCode,
+      'name': produk.productName,
+      'category': _normalizeKategori(produk.category),
+      'brand': produk.brand,
+      'price': finalPrice,
+      'desc': produk.desc,
+      'status': finalStatus,
+      'isPrepaid': isPrepaid,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
+
+  ProdukTableCompanion _mapFromFirestore(Map<String, dynamic> data) {
+    final status = data['status'] as String? ?? 'non-aktif';
+    return ProdukTableCompanion(
+      kodeDigiflazz: Value(data['sku'] ?? ''),
+      nama: Value(data['name'] ?? ''),
+      kategori: Value(data['category'] ?? 'Lainnya'),
+      brand: Value(data['brand'] ?? ''),
+      hargaBeli: Value(0),
+      hargaJual: Value(data['price'] ?? 0),
+      aktif: Value(status == 'aktif'),
+      deskripsi: Value(data['desc'] ?? ''),
+      lastUpdated: Value(DateTime.now()),
+    );
+  }
+
+  ProdukTableCompanion _mapToProdukCompanion(
+    ProdukDigiflazz produk,
+    int markup, {
+    Produk? existing,
+  }) {
+    final bool isAktif = existing?.aktif ?? false;
+    final int finalHargaJual = (existing != null && existing.hargaJual > 0) ? existing.hargaJual : (produk.price + markup);
+
     return ProdukTableCompanion(
       kodeDigiflazz: Value(produk.buyerSkuCode),
       nama: Value(produk.productName),
       kategori: Value(_normalizeKategori(produk.category)),
       brand: Value(produk.brand),
-      hargaBeli: Value(produk.price + markup),
+      hargaBeli: Value(produk.price),
+      hargaJual: Value(finalHargaJual),
+      aktif: Value(isAktif),
       deskripsi: Value(produk.desc),
       lastUpdated: Value(DateTime.now()),
-      // Catatan: 'aktif' dan 'hargaJual' TIDAK di-update saat sync
-      // agar setting user tidak tertimpa
     );
   }
 
-  /// Normalisasi nama kategori dari Digiflazz ke format lokal.
-  ///
-  /// Digiflazz menggunakan nama kategori yang bervariasi,
-  /// kita mapping ke set kategori yang konsisten.
   String _normalizeKategori(String kategoriApi) {
     final lower = kategoriApi.toLowerCase();
-
     if (lower.contains('pulsa')) return 'Pulsa';
     if (lower.contains('data')) return 'Paket Data';
-    if (lower.contains('token') || lower.contains('pln')) {
-      return 'Token Listrik';
-    }
-    if (lower.contains('e-money') || lower.contains('emoney')) {
-      return 'E-Money';
-    }
-    if (lower.contains('game') || lower.contains('voucher')) {
-      return 'Voucher Game';
-    }
-
-    // Gunakan kategori asli jika tidak cocok mapping
+    if (lower.contains('token') || lower.contains('pln')) return 'Token Listrik';
+    if (lower.contains('tagihan') || lower.contains('pasca')) return 'Pascabayar';
+    if (lower.contains('e-money') || lower.contains('emoney')) return 'E-Money';
+    if (lower.contains('game') || lower.contains('voucher')) return 'Voucher Game';
     return kategoriApi.isNotEmpty ? kategoriApi : 'Lainnya';
   }
+}
+
+class _SyncStats {
+  final int totalDariApi;
+  final int totalDisimpan;
+  final int totalDiSkip;
+  const _SyncStats(this.totalDariApi, this.totalDisimpan, this.totalDiSkip);
 }
