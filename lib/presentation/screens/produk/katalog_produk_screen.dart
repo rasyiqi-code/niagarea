@@ -7,18 +7,42 @@ import '../../../data/database/app_database.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/digiflazz_provider.dart';
 import '../../providers/pelanggan_produk_provider.dart';
+import '../../widgets/produk_type_badge.dart';
 import 'sinkronisasi_produk_screen.dart';
 
 /// Halaman katalog produk dengan proteksi mode online untuk produk Niagarea.
-class KatalogProdukScreen extends ConsumerWidget {
+class KatalogProdukScreen extends ConsumerStatefulWidget {
   const KatalogProdukScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<KatalogProdukScreen> createState() => _KatalogProdukScreenState();
+}
+
+class _KatalogProdukScreenState extends ConsumerState<KatalogProdukScreen> {
+  bool _hasCheckedFirestore = false;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final produkAsync = ref.watch(produkAktifProvider);
     final isAdmin = ref.watch(isAdminModeProvider);
     final isOffline = ref.watch(isOfflineProvider);
+    final dgState = ref.watch(digiflazzNotifierProvider);
+
+    // ── Auto-Hydration Utama ──────────────────────────────────────
+    // Memicu sinkronisasi Firestore otomatis jika catalog lokal kosong (misal setelah refresh localhost)
+    ref.listen(semuaProdukProvider, (previous, next) {
+      if (_hasCheckedFirestore || isOffline) return;
+      
+      next.whenData((list) {
+        if (list.isEmpty && !dgState.isLoading) {
+          _hasCheckedFirestore = true;
+          Future.microtask(() {
+            ref.read(digiflazzNotifierProvider.notifier).pullFromFirestore();
+          });
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -39,7 +63,7 @@ class KatalogProdukScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_katalog',
-        onPressed: () => _showTambahProdukDialog(context, ref),
+        onPressed: () => _showTambahProdukDialog(context),
         child: const Icon(Icons.add),
       ),
       body: Column(
@@ -104,11 +128,21 @@ class KatalogProdukScreen extends ConsumerWidget {
           return Card(
             child: ListTile(
               enabled: !isDisabled,
-              title: Text(
-                p.nama, 
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: isDisabled ? theme.colorScheme.onSurface.withAlpha(100) : null,
-                ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      p.nama,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: isDisabled
+                            ? theme.colorScheme.onSurface.withAlpha(100)
+                            : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ProdukTypeBadge(isNiagarea: p.isNiagarea),
+                ],
               ),
               subtitle: Text(
                 'Beli: ${CurrencyFormatter.format(p.hargaBeli)} | Jual: ${CurrencyFormatter.format(p.hargaJual)}',
@@ -163,7 +197,7 @@ class KatalogProdukScreen extends ConsumerWidget {
     );
   }
 
-  void _showTambahProdukDialog(BuildContext context, WidgetRef ref) {
+  void _showTambahProdukDialog(BuildContext context) {
     final namaCtrl = TextEditingController();
     final hargaBeliCtrl = TextEditingController();
     final hargaJualCtrl = TextEditingController();

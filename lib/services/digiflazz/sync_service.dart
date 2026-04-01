@@ -62,24 +62,49 @@ class SyncService {
     int totalApi = 0;
     int totalSimpan = 0;
     int totalSkip = 0;
+    final List<String> feedback = [];
 
-    final resPrepaid = await _prosesSync('prepaid', onProgress);
-    totalApi += resPrepaid.totalDariApi;
-    totalSimpan += resPrepaid.totalDisimpan;
-    totalSkip += resPrepaid.totalDiSkip;
+    // --- 1. PRABAYAR ---
+    try {
+      final resPrepaid = await _prosesSync('prepaid', onProgress);
+      totalApi += resPrepaid.totalDariApi;
+      totalSimpan += resPrepaid.totalDisimpan;
+      totalSkip += resPrepaid.totalDiSkip;
+      feedback.add('Prabayar: ${resPrepaid.totalDisimpan} produk diupdate.');
+    } catch (e) {
+      final err = e.toString().replaceAll('Exception: ', '').trim();
+      feedback.add('Prabayar gagal: $err');
+    }
 
+    // --- 2. PASCABAYAR ---
     if (includePasca) {
-      final resPasca = await _prosesSync('pasca', onProgress);
-      totalApi += resPasca.totalDariApi;
-      totalSimpan += resPasca.totalDisimpan;
-      totalSkip += resPasca.totalDiSkip;
+      // Jeda 3 detik untuk mencegah terkena Rate Limit API Digiflazz
+      onProgress?.call(const SyncProgress(total: 0, current: 0, status: 'Menyiapkan sinkronisasi pascabayar... (Digiflazz membatasi 1 request per 5 menit)'));
+      await Future.delayed(const Duration(seconds: 3));
+
+      try {
+        final resPasca = await _prosesSync('pasca', onProgress);
+        totalApi += resPasca.totalDariApi;
+        totalSimpan += resPasca.totalDisimpan;
+        totalSkip += resPasca.totalDiSkip;
+        feedback.add('Pascabayar: ${resPasca.totalDisimpan} produk diupdate.');
+      } catch (e) {
+        final err = e.toString().replaceAll('Exception: ', '').trim();
+        // Beri warning Rate Limit yang lebih jelas jika Digiflazz menolak
+        feedback.add('Pascabayar dibatasi: $err (Maks. 1x / 5 Menit)');
+      }
+    }
+
+    if (totalApi == 0 && totalSimpan == 0 && totalSkip == 0 && feedback.any((f) => f.contains('gagal') || f.contains('dibatasi'))) {
+      // Jika KEDUANYA gagal secara total, lempar sebagai Exception untuk ditangkap dan menjadi pesan merah
+      throw Exception(feedback.join(' | '));
     }
 
     return SyncResult(
       totalDariApi: totalApi,
       totalDisimpan: totalSimpan,
       totalDiSkip: totalSkip,
-      pesan: 'Berhasil sinkronisasi $totalSimpan produk.',
+      pesan: feedback.join('\\n'),
     );
   }
 

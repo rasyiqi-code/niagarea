@@ -101,3 +101,9 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 }
+
+/// Helper extension untuk membedakan produk Digiflazz (Niagarea) vs Manual.
+extension ProdukTypeExtension on Produk {
+  bool get isManual => kodeDigiflazz.startsWith('manual_');
+  bool get isNiagarea => !isManual;
+}

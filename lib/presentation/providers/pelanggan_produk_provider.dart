@@ -4,6 +4,7 @@
 /// untuk manajemen pelanggan dan produk.
 library;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -109,7 +110,8 @@ class ProdukNotifier extends StateNotifier<AsyncValue<void>> {
     try {
       final id = await _db.produkDao.tambahProduk(
         ProdukTableCompanion.insert(
-          kodeDigiflazz: kodeDigiflazz.isEmpty ? 'manual_$nama' : kodeDigiflazz,
+          kodeDigiflazz:
+              kodeDigiflazz.isEmpty ? 'manual_${DateTime.now().millisecondsSinceEpoch}' : kodeDigiflazz,
           nama: nama,
           kategori: Value(kategori),
           brand: Value(brand),
@@ -126,21 +128,43 @@ class ProdukNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  /// Update harga jual produk.
+  /// Update harga jual produk dan backup ke Cloud.
   Future<void> updateHargaJual(int idProduk, int hargaBaru) async {
     state = const AsyncValue.loading();
     try {
       await _db.produkDao.updateHargaJual(idProduk, hargaBaru);
+      
+      // Sinkronisasikan perubahan ke Firestore untuk backup (Auto-Hydration)
+      final p = await _db.produkDao.ambilProdukById(idProduk);
+      if (p != null && !p.kodeDigiflazz.startsWith('manual_')) {
+        await FirebaseFirestore.instance
+            .collection('products')
+            .doc(p.kodeDigiflazz)
+            .update({'price': hargaBaru})
+            // Ignore error jika dokumen belum ada di Firestore
+            .catchError((_) {}); 
+      }
+
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  /// Toggle status aktif produk.
+  /// Toggle status aktif produk dan backup ke Cloud.
   Future<void> toggleAktif(int idProduk, bool aktif) async {
     try {
       await _db.produkDao.toggleAktif(idProduk, aktif);
+
+      // Sinkronisasikan perubahan ke Firestore untuk backup (Auto-Hydration)
+      final p = await _db.produkDao.ambilProdukById(idProduk);
+      if (p != null && !p.kodeDigiflazz.startsWith('manual_')) {
+        await FirebaseFirestore.instance
+            .collection('products')
+            .doc(p.kodeDigiflazz)
+            .update({'status': aktif ? 'aktif' : 'non-aktif'})
+            .catchError((_) {});
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

@@ -12,7 +12,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/database/app_database.dart';
 import '../../providers/connectivity_provider.dart';
-import '../../providers/core_providers.dart';
 import '../../providers/digiflazz_provider.dart';
 import '../../providers/pelanggan_produk_provider.dart';
 
@@ -390,8 +389,7 @@ class _ProdukItem extends ConsumerWidget {
         leading: Checkbox(
           value: produk.aktif,
           onChanged: (val) async {
-            final db = ref.read(databaseProvider);
-            await db.produkDao.toggleAktif(produk.id, val ?? false);
+            await ref.read(produkNotifierProvider.notifier).toggleAktif(produk.id, val ?? false);
             ref.invalidate(semuaProdukProvider);
           },
         ),
@@ -479,8 +477,7 @@ class _ProdukItem extends ConsumerWidget {
                 return;
               }
 
-              final db = ref.read(databaseProvider);
-              await db.produkDao.updateHargaJual(produk.id, harga);
+              await ref.read(produkNotifierProvider.notifier).updateHargaJual(produk.id, harga);
               ref.invalidate(semuaProdukProvider);
 
               if (ctx.mounted) Navigator.pop(ctx);

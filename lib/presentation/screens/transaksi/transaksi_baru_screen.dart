@@ -16,6 +16,7 @@ import '../../providers/pelanggan_produk_provider.dart';
 import '../../providers/transaksi_provider.dart';
 import '../../providers/kotak_uang_provider.dart';
 import '../../providers/pascabayar_provider.dart';
+import '../../widgets/produk_type_badge.dart';
 import '../../../services/digiflazz/digiflazz_models.dart';
 
 /// form transaksi baru — jual produk ke pelanggan.
@@ -28,18 +29,27 @@ class TransaksiBaruScreen extends ConsumerStatefulWidget {
 }
 
 class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
-  Pelanggan? _selectedPelanggan;
-  Produk? _selectedProduk;
+  int? _selectedPelangganId;
+  int? _selectedProdukId;
   String _statusBayar = StatusBayar.lunas;
   final _tujuanController = TextEditingController();
   final _catatanController = TextEditingController();
-  KotakUang? _selectedKotakUang;
+  int? _selectedKotakUangId;
   TagihanResponse? _inquiryData;
   String? _namaPln;
 
+  /// Pelanggan & Produk aktif (diambil dari list saat ini).
+  Pelanggan? _getPelanggan(List<Pelanggan> list) =>
+      list.where((p) => p.id == _selectedPelangganId).firstOrNull;
+
+  Produk? _getProduk(List<Produk> list) =>
+      list.where((p) => p.id == _selectedProdukId).firstOrNull;
+
+  KotakUang? _getKotakUang(List<KotakUang> list) =>
+      list.where((k) => k.id == _selectedKotakUangId).firstOrNull;
+
   /// Profit = harga_jual - harga_beli
-  int get _profit =>
-      (_selectedProduk?.hargaJual ?? 0) - (_selectedProduk?.hargaBeli ?? 0);
+  int _getProfit(Produk? p) => (p?.hargaJual ?? 0) - (p?.hargaBeli ?? 0);
 
   @override
   void dispose() {
@@ -50,32 +60,37 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
 
   /// Submit transaksi.
   Future<void> _submit() async {
-    if (_selectedProduk == null) {
+    final produkAsync = ref.read(produkAktifProvider);
+    final produkList = produkAsync.valueOrNull ?? [];
+    final produk = _getProduk(produkList);
+
+    if (produk == null) {
       _showError('Pilih produk terlebih dahulu');
       return;
     }
 
-    final produk = _selectedProduk!;
-    final isPasca = produk.kategori.toLowerCase().contains('pascabayar') ||
-        produk.kategori.toLowerCase().contains('tagihan');
+    final isPasca = (produk.kategori.toLowerCase().contains('pascabayar') ||
+            produk.kategori.toLowerCase().contains('tagihan')) &&
+        !produk.isManual;
 
     if (isPasca && _inquiryData == null) {
       _showError('Silakan cek tagihan terlebih dahulu');
       return;
     }
 
+    final profit = _getProfit(produk);
     int? id;
     if (isPasca) {
       id = await ref
           .read(transaksiNotifierProvider.notifier)
           .buatTransaksiPascabayar(
-            idPelanggan: _selectedPelanggan?.id,
+            idPelanggan: _selectedPelangganId,
             idProduk: produk.id,
             namaProduk: produk.nama,
             hargaBeli: _inquiryData!.price,
-            hargaJual: _inquiryData!.price + _profit, // Harga jual = biaya + profit admin
+            hargaJual: _inquiryData!.price + profit, // Harga jual = biaya + profit admin
             statusBayar: _statusBayar,
-            idKotakUang: _selectedKotakUang?.id,
+            idKotakUang: _selectedKotakUangId,
             refId: _inquiryData!.refId,
             tujuan: _tujuanController.text.trim(),
             catatan: _catatanController.text.trim(),
@@ -83,13 +98,13 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
           );
     } else {
       id = await ref.read(transaksiNotifierProvider.notifier).buatTransaksi(
-        idPelanggan: _selectedPelanggan?.id,
+        idPelanggan: _selectedPelangganId,
         idProduk: produk.id,
         namaProduk: produk.nama,
         hargaBeli: produk.hargaBeli,
         hargaJual: produk.hargaJual,
         statusBayar: _statusBayar,
-        idKotakUang: _selectedKotakUang?.id,
+        idKotakUang: _selectedKotakUangId,
         tujuan: _tujuanController.text.trim(),
         catatan: _catatanController.text.trim(),
         kodeDigiflazz: produk.kodeDigiflazz,
@@ -101,7 +116,7 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
         SnackBar(
           content: Text(
             'Transaksi berhasil! '
-            'Profit: ${CurrencyFormatter.format(_profit)}',
+            'Profit: ${CurrencyFormatter.format(profit)}',
           ),
         ),
       );
@@ -125,7 +140,8 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
   }
 
   Future<void> _cekTagihan() async {
-    final produk = _selectedProduk;
+    final produkList = ref.read(produkAktifProvider).valueOrNull ?? [];
+    final produk = _getProduk(produkList);
     final tujuan = _tujuanController.text.trim();
 
     if (produk == null || tujuan.isEmpty) return;
@@ -170,6 +186,9 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
     final state = ref.watch(transaksiNotifierProvider);
     final isLoading = state is AsyncLoading;
 
+    final produkList = produkAsync.valueOrNull ?? [];
+    final selectedProduk = _getProduk(produkList);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Transaksi Baru')),
       body: ListView(
@@ -179,31 +198,34 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
           Text('Pelanggan', style: theme.textTheme.labelLarge),
           const SizedBox(height: 8),
           pelangganAsync.when(
-            data: (list) => DropdownButtonFormField<Pelanggan>(
-              initialValue: _selectedPelanggan,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.person_outline),
-                hintText: 'Pilih pelanggan...',
-              ),
-              items: list
-                  .map(
-                    (p) => DropdownMenuItem(
-                      value: p,
-                      child: Text(
-                        '${p.nama} ${p.noHp.isNotEmpty ? "(${p.noHp})" : ""}',
+            data: (list) {
+              final selected = _getPelanggan(list);
+              return DropdownButtonFormField<Pelanggan>(
+                initialValue: selected,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.person_outline),
+                  hintText: 'Pilih pelanggan...',
+                ),
+                items: list
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(
+                          '${p.nama} ${p.noHp.isNotEmpty ? "(${p.noHp})" : ""}',
+                        ),
                       ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (p) {
-                setState(() {
-                  _selectedPelanggan = p;
-                  if (p != null && p.noHp.isNotEmpty) {
-                    _tujuanController.text = p.noHp;
-                  }
-                });
-              },
-            ),
+                    )
+                    .toList(),
+                onChanged: (p) {
+                  setState(() {
+                    _selectedPelangganId = p?.id;
+                    if (p != null && p.noHp.isNotEmpty) {
+                      _tujuanController.text = p.noHp;
+                    }
+                  });
+                },
+              );
+            },
             loading: () => const LinearProgressIndicator(),
             error: (_, _) => const Text('Gagal memuat pelanggan'),
           ),
@@ -228,8 +250,9 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
                   ),
                 );
               }
+              final selected = _getProduk(list);
               return DropdownButtonFormField<Produk>(
-                initialValue: _selectedProduk,
+                initialValue: selected,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.inventory_2_outlined),
                   hintText: 'Pilih produk...',
@@ -238,14 +261,29 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
                     .map(
                       (p) => DropdownMenuItem(
                         value: p,
-                        child: Text(
-                          '${p.nama} — ${CurrencyFormatter.format(p.hargaJual)}',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              p.nama,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                            const SizedBox(width: 8),
+                            ProdukTypeBadge(isNiagarea: p.isNiagarea),
+                            const SizedBox(width: 8),
+                            Text(
+                              CurrencyFormatter.format(p.hargaJual),
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(fontSize: 11),
+                            ),
+                          ],
                         ),
                       ),
                     )
                     .toList(),
                 onChanged: (p) => setState(() {
-                  _selectedProduk = p;
+                  _selectedProdukId = p?.id;
                   _inquiryData = null; // Reset inquiry if product changes
                   _namaPln = null;
                 }),
@@ -280,9 +318,9 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
                   },
                 ),
               ),
-              if (_selectedProduk != null) ...[
+              if (selectedProduk != null) ...[
                 const SizedBox(width: 8),
-                _buildCekButton(),
+                _buildCekButton(selectedProduk),
               ],
             ],
           ),
@@ -310,7 +348,7 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
           const SizedBox(height: 16),
 
           // ── Ringkasan Harga ─────────────────────────
-          if (_selectedProduk != null) ...[
+          if (selectedProduk != null) ...[
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -321,15 +359,19 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
                 children: [
                   _HargaRow(
                     label: 'Harga Beli',
-                    value: _selectedProduk!.hargaBeli,
+                    value: selectedProduk.hargaBeli,
                   ),
                   const Divider(),
                   _HargaRow(
                     label: 'Harga Jual',
-                    value: _selectedProduk!.hargaJual,
+                    value: selectedProduk.hargaJual,
                   ),
                   const Divider(),
-                  _HargaRow(label: 'Untung', value: _profit, isProfit: true),
+                  _HargaRow(
+                    label: 'Untung',
+                    value: _getProfit(selectedProduk),
+                    isProfit: true,
+                  ),
                 ],
               ),
             ),
@@ -366,14 +408,17 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
                 .when(
                   data: (list) {
                     // Set default ke Laci Tunai jika belum pilih
-                    if (_selectedKotakUang == null && list.isNotEmpty) {
-                      _selectedKotakUang = list.firstWhere(
-                        (k) => k.nama == 'Laci Tunai',
-                        orElse: () => list.first,
-                      );
+                    if (_selectedKotakUangId == null && list.isNotEmpty) {
+                      _selectedKotakUangId = list
+                          .firstWhere(
+                            (k) => k.nama == 'Laci Tunai',
+                            orElse: () => list.first,
+                          )
+                          .id;
                     }
+                    final selected = _getKotakUang(list);
                     return DropdownButtonFormField<KotakUang>(
-                      initialValue: _selectedKotakUang,
+                      initialValue: selected,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.account_balance_wallet_outlined),
                         hintText: 'Pilih wadah uang...',
@@ -384,7 +429,8 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
                                 DropdownMenuItem(value: k, child: Text(k.nama)),
                           )
                           .toList(),
-                      onChanged: (k) => setState(() => _selectedKotakUang = k),
+                      onChanged: (k) =>
+                          setState(() => _selectedKotakUangId = k?.id),
                     );
                   },
                   loading: () => const LinearProgressIndicator(),
@@ -423,9 +469,11 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
   }
 
   bool get _isPascabayarButNoInquiry {
-    if (_selectedProduk == null) return false;
-    final isPasca = _selectedProduk!.kategori.toLowerCase().contains('pasca') ||
-        _selectedProduk!.kategori.toLowerCase().contains('tagihan');
+    final produkList = ref.watch(produkAktifProvider).valueOrNull ?? [];
+    final selectedProduk = _getProduk(produkList);
+    if (selectedProduk == null || selectedProduk.isManual) return false;
+    final isPasca = selectedProduk.kategori.toLowerCase().contains('pasca') ||
+        selectedProduk.kategori.toLowerCase().contains('tagihan');
     return isPasca && _inquiryData == null;
   }
 
@@ -436,8 +484,9 @@ class _TransaksiBaruScreenState extends ConsumerState<TransaksiBaruScreen> {
     return 'Simpan Transaksi';
   }
 
-  Widget _buildCekButton() {
-    final kategori = _selectedProduk!.kategori.toLowerCase();
+  Widget _buildCekButton(Produk produk) {
+    if (produk.isManual) return const SizedBox.shrink();
+    final kategori = produk.kategori.toLowerCase();
     final isPln = kategori.contains('pln');
     final isPasca = kategori.contains('pasca') || kategori.contains('tagihan');
 

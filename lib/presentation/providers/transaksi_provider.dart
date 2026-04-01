@@ -81,7 +81,9 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
       final profit = hargaJual - hargaBeli;
 
       // Tentukan status kirim berdasarkan ada/tidaknya kode Digiflazz
-      final statusKirim = (kodeDigiflazz != null && kodeDigiflazz.isNotEmpty)
+      final statusKirim = (kodeDigiflazz != null &&
+              kodeDigiflazz.isNotEmpty &&
+              !kodeDigiflazz.startsWith('manual_'))
           ? 'pending'
           : 'manual';
 
@@ -124,9 +126,10 @@ class TransaksiNotifier extends StateNotifier<AsyncValue<void>> {
         rethrow;
       }
 
-      // 4. Tambahkan ke antrian Digiflazz (jika ada kode produk)
+      // 4. Tambahkan ke antrian Digiflazz (jika ada kode produk & bukan manual)
       if (kodeDigiflazz != null &&
           kodeDigiflazz.isNotEmpty &&
+          !kodeDigiflazz.startsWith('manual_') &&
           tujuan.isNotEmpty &&
           _queueService != null) {
         try {

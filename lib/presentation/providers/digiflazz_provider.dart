@@ -237,7 +237,9 @@ class DigiflazzNotifier extends StateNotifier<DigiflazzState> {
       );
       return false;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      // Membersihkan teks "Exception: " agar lebih enak dibaca user
+      final cleanMsg = e.toString().replaceAll('Exception: ', '').trim();
+      state = state.copyWith(isLoading: false, error: cleanMsg);
       return false;
     }
   }
